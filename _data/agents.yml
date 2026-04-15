@@ -129,6 +129,10 @@
     mini-a:
       useplanning: true
       usestream: true
+    ---
+
+    Diagnose and fix issues with Docker containers, images, or compose stacks.
+    Use shell commands and MCP tools to investigate and resolve problems.
 
 - name: security-auditor
   title: "Security Auditor"
@@ -154,3 +158,8 @@
       deepresearch: true
       format: md
       outfile: security-report.md
+    ---
+
+    Perform a security audit of the specified codebase or module.
+    Identify vulnerabilities, insecure patterns, and provide remediation steps.
+
