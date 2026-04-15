@@ -57,7 +57,7 @@
   title: "Documentation Writer"
   description: "Writes or updates API documentation from source code. Reads functions, classes, and modules and produces Markdown docs."
   tags: [docs, markdown, api, code]
-  usage: "mini-a agent=doc-writer.agent.md goal=\"document src/api.js\""
+  usage: "mini-a agent=doc-writer.agent.md"
   code: |
     ---
     name: doc-writer
@@ -78,13 +78,13 @@
       useplanning: true
     ---
 
-    Document all exported symbols in the target file or directory.
+    Discover all source files in the current project and document their exported symbols in Markdown.
 
 - name: test-writer
   title: "Unit Test Writer"
   description: "Generates unit tests for existing code. Detects the test framework in use and follows project conventions."
   tags: [testing, jest, pytest, code]
-  usage: "mini-a agent=test-writer.agent.md goal=\"write tests for src/utils.js\""
+  usage: "mini-a agent=test-writer.agent.md"
   code: |
     ---
     name: test-writer
@@ -106,13 +106,13 @@
     ---
 
     Identify the test framework in use, then write comprehensive unit tests
-    for the specified file or module.
+    for each untested source file or module in the current project.
 
 - name: docker-manager
   title: "Docker Manager"
   description: "Manages Docker containers, images, and compose stacks. Diagnoses issues and suggests fixes using shell and MCP tools."
   tags: [docker, devops, containers, ops]
-  usage: "mini-a agent=docker-manager.agent.md goal=\"check why my compose stack is unhealthy\""
+  usage: "mini-a agent=docker-manager.agent.md"
   code: |
     ---
     name: docker-manager
@@ -131,14 +131,14 @@
       usestream: true
     ---
 
-    Diagnose and fix issues with Docker containers, images, or compose stacks.
-    Use shell commands and MCP tools to investigate and resolve problems.
+    Inspect all running Docker containers and compose stacks, diagnose any issues found,
+    and report on their health status using shell commands.
 
 - name: security-auditor
   title: "Security Auditor"
   description: "Performs a security audit of a codebase. Identifies vulnerabilities, insecure patterns, and suggests remediations."
   tags: [security, audit, code, vulnerabilities]
-  usage: "mini-a agent=security-auditor.agent.md goal=\"audit the auth module\""
+  usage: "mini-a agent=security-auditor.agent.md"
   code: |
     ---
     name: security-auditor
@@ -160,7 +160,7 @@
       outfile: security-report.md
     ---
 
-    Perform a security audit of the specified codebase or module.
+    Perform a security audit of the codebase in the current directory.
     Identify vulnerabilities, insecure patterns, and provide remediation steps.
 
 - name: summary
