@@ -303,6 +303,7 @@
 
     var initialItemId = parseHash();
     if (initialItemId && getCardById(initialItemId)) {
+      var initialItem = getCardById(initialItemId);
       activeType = "all";
       activeQuery = "";
       if (searchInput) {
@@ -311,6 +312,9 @@
       setActiveFilterButton(activeType);
       isolatedItemId = initialItemId;
       applyState();
+      if (initialItem) {
+        restoreScroll(Math.max(0, initialItem.offsetTop - 16));
+      }
       window.history.replaceState(buildHistoryState("item"), "", setHash(initialItemId));
       return;
     }
