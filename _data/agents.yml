@@ -167,7 +167,7 @@
   title: "Summary Starter"
   description: "Shipped `.agent.md` starter aligned with `summary.yaml`. Good baseline for a small, tool-grounded summarization agent."
   tags: [starter, summary, docs, shipped]
-  usage: "mini-a agent=summary.agent.md goal=\"summarize this project\""
+  usage: "mini-a agent=summary.agent.md"
   code: |
     ---
     name: summary
@@ -194,15 +194,13 @@
       You are a specialized AI agent for summary workflows.
     ---
 
-    # Notes
-    - Tune capabilities and tools for your scenario.
-    - Run with: mini-a agent=examples/summary.agent.md goal="..."
+    Summarize the current project: its purpose, structure, and key components.
 
 - name: learn-from-chat
   title: "Learn From Chat Starter"
   description: "Shipped `.agent.md` starter aligned with `learn-from-chat.yaml`. Useful as a base profile for extracting patterns or reusable knowledge from prior conversations."
   tags: [starter, chat, memory, shipped]
-  usage: "mini-a agent=learn-from-chat.agent.md goal=\"extract durable lessons from this thread\""
+  usage: "mini-a agent=learn-from-chat.agent.md"
   code: |
     ---
     name: learn-from-chat
@@ -229,6 +227,4 @@
       You are a specialized AI agent for learn-from-chat workflows.
     ---
 
-    # Notes
-    - Tune capabilities and tools for your scenario.
-    - Run with: mini-a agent=examples/learn-from-chat.agent.md goal="..."
+    Extract durable lessons and reusable patterns from the conversation history provided.
