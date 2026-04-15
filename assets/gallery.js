@@ -175,9 +175,15 @@
         var show = showIsolated
           ? card === isolatedCard
           : cardMatchesType(card) && cardMatchesQuery(card);
+        var details = card.querySelector(".card-code-details");
 
         card.style.display = show ? "" : "none";
         card.classList.toggle("gallery-card--isolated", showIsolated && card === isolatedCard);
+
+        if (details) {
+          details.open = showIsolated && card === isolatedCard;
+        }
+
         if (show) visible += 1;
       });
 

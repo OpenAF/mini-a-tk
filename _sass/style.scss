@@ -218,6 +218,14 @@
   cursor: default;
 }
 
+.gallery-card .card-code-details {
+  display: none;
+}
+
+.gallery-card--isolated .card-code-details {
+  display: block;
+}
+
 .gallery-card-close {
   display: none;
   align-self: flex-end;
