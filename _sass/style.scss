@@ -190,6 +190,30 @@
   font-style: italic;
 }
 
+.gallery-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 0 1.5rem;
+}
+
+.gallery-more-btn {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(160, 174, 192, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+  &:hover {
+    background: #68d391;
+    border-color: #68d391;
+    color: #1a202c;
+  }
+}
+
 // Gallery Card
 .gallery-card {
   border: 1px solid rgba(160, 174, 192, 0.3);

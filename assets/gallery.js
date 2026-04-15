@@ -48,13 +48,24 @@
     var emptyMsg = document.getElementById("gallery-empty");
     var filterBtns = Array.prototype.slice.call(document.querySelectorAll(".filter-btn"));
     var searchInput = document.getElementById("gallery-search");
+    var showMoreWrap = document.createElement("div");
+    var showMoreButton = document.createElement("button");
+    var initialVisibleCount = 12;
     var gridId = grid.id || "gallery-" + index;
     var activeType = "all";
     var activeQuery = "";
     var isolatedItemId = null;
+    var visibleCount = initialVisibleCount;
     var knownIds = {};
 
     if (!cards.length) return;
+
+    showMoreWrap.className = "gallery-more";
+    showMoreButton.type = "button";
+    showMoreButton.className = "gallery-more-btn";
+    showMoreButton.textContent = "Show more";
+    showMoreWrap.appendChild(showMoreButton);
+    grid.parentNode.insertBefore(showMoreWrap, grid.nextSibling);
 
     cards
       .slice()
@@ -159,6 +170,7 @@
           view: view,
           activeType: activeType,
           activeQuery: activeQuery,
+          visibleCount: visibleCount,
           isolatedItemId: isolatedItemId,
           scrollY: window.scrollY
         }
@@ -177,16 +189,21 @@
     }
 
     function applyState() {
-      var visible = 0;
       var isolatedCard = isolatedItemId ? getCardById(isolatedItemId) : null;
       var showIsolated = Boolean(isolatedCard);
+      var filteredCards = cards.filter(function (card) {
+        return cardMatchesType(card) && cardMatchesQuery(card);
+      });
+      var effectiveVisibleCount = Math.min(visibleCount, filteredCards.length);
 
       grid.classList.toggle("gallery-grid--isolated", showIsolated);
+      showMoreWrap.style.display = !showIsolated && filteredCards.length > effectiveVisibleCount ? "" : "none";
+      showMoreButton.textContent = "Show " + Math.min(initialVisibleCount, filteredCards.length - effectiveVisibleCount) + " more";
 
       cards.forEach(function (card) {
         var show = showIsolated
           ? card === isolatedCard
-          : cardMatchesType(card) && cardMatchesQuery(card);
+          : filteredCards.indexOf(card) >= 0 && filteredCards.indexOf(card) < effectiveVisibleCount;
         var codeBlock = card.querySelector(".card-code");
 
         card.style.display = show ? "" : "none";
@@ -201,11 +218,10 @@
           }
         }
 
-        if (show) visible += 1;
       });
 
       if (emptyMsg) {
-        emptyMsg.style.display = !showIsolated && visible === 0 ? "" : "none";
+        emptyMsg.style.display = !showIsolated && filteredCards.length === 0 ? "" : "none";
       }
     }
 
@@ -215,6 +231,7 @@
 
       activeType = nextState.activeType || "all";
       activeQuery = nextState.activeQuery || "";
+      visibleCount = nextState.visibleCount || initialVisibleCount;
       isolatedItemId = null;
 
       if (searchInput) {
@@ -246,6 +263,7 @@
     filterBtns.forEach(function (btn) {
       btn.addEventListener("click", function () {
         activeType = btn.dataset.type || "all";
+        visibleCount = initialVisibleCount;
         isolatedItemId = null;
         setActiveFilterButton(activeType);
         applyState();
@@ -256,11 +274,19 @@
     if (searchInput) {
       searchInput.addEventListener("input", function () {
         activeQuery = normalize(searchInput.value.trim());
+        visibleCount = initialVisibleCount;
         isolatedItemId = null;
         applyState();
         syncCurrentHistoryState();
       });
     }
+
+    showMoreButton.addEventListener("click", function () {
+      visibleCount += initialVisibleCount;
+      isolatedItemId = null;
+      applyState();
+      syncCurrentHistoryState();
+    });
 
     cards.forEach(function (card) {
       card.addEventListener("click", function (event) {
@@ -287,6 +313,7 @@
         isolatedItemId = state.isolatedItemId;
         activeType = state.activeType || "all";
         activeQuery = state.activeQuery || "";
+        visibleCount = state.visibleCount || initialVisibleCount;
         if (searchInput) {
           searchInput.value = activeQuery;
         }
