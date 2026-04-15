@@ -180,7 +180,7 @@
         card.classList.toggle("gallery-card--isolated", showIsolated && card === isolatedCard);
 
         if (codeBlock) {
-          codeBlock.hidden = !(showIsolated && card === isolatedCard);
+          codeBlock.classList.toggle("card-code--visible", showIsolated && card === isolatedCard);
         }
 
         if (show) visible += 1;
