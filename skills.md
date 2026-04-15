@@ -18,6 +18,8 @@ mini-a extraskills=/path/to/shared-skills
 - `~/.openaf-mini-a/skills/<name>/SKILL.md`
 - `~/.openaf-mini-a/skills/<name>.md`
 
+You can also drop downloaded skill packs in `~/.openaf-mini-a/skills/` as folders as long as each one contains `SKILL.md` (or `skill.md`). Inside folder skills, relative `@file.md` attachments resolve against the skill folder, and relative markdown links to `.md` files are inlined as extra reference content.
+
 ---
 
 <div class="category-grid">
