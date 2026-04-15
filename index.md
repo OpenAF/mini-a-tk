@@ -43,6 +43,129 @@ permalink: /
 
 ---
 
+## Add Them To mini-a
+{: .section-title}
+
+Use the default home folder when you want the customization available in every session:
+
+```bash
+mkdir -p ~/.openaf-mini-a/commands ~/.openaf-mini-a/skills ~/.openaf-mini-a/hooks
+```
+
+### 1. Add a slash command
+
+Create a markdown template in `~/.openaf-mini-a/commands/<name>.md`:
+
+```markdown
+Follow these instructions exactly.
+
+Target: {{arg1}}
+Raw args: {{args}}
+Parsed args: {{argv}}
+```
+
+Run it in the console:
+
+```bash
+/my-command repo-a --fast "include docs"
+```
+
+Run it directly from the CLI:
+
+```bash
+mini-a exec="/my-command repo-a --fast \"include docs\""
+```
+
+Load commands from extra directories:
+
+```bash
+mini-a extracommands=/path/to/team-commands,/path/to/project-commands
+```
+
+Notes:
+- Default commands in `~/.openaf-mini-a/commands/` win over `extracommands`.
+- Earlier `extracommands` paths win over later ones.
+- Built-ins such as `/help` still win over custom commands.
+
+### 2. Add a skill
+
+mini-a supports two skill layouts:
+
+```text
+~/.openaf-mini-a/skills/my-skill/SKILL.md
+~/.openaf-mini-a/skills/my-skill.md
+```
+
+Example single-file skill:
+
+```markdown
+Review the current change carefully.
+Focus on correctness, edge cases, and missing tests.
+```
+
+Invoke it with either form:
+
+```bash
+/my-skill src/auth
+$my-skill src/auth
+```
+
+Load skills from extra directories:
+
+```bash
+mini-a extraskills=/path/to/shared-skills,/path/to/project-skills
+```
+
+Notes:
+- Default skills in `~/.openaf-mini-a/skills/` win over `extraskills`.
+- If a skill and a slash command share the same name, the skill wins.
+- Use `/skills` or `/skills <prefix>` to list discovered skills.
+
+### 3. Add a hook
+
+Create a hook definition in `~/.openaf-mini-a/hooks/*.yaml`, `*.yml`, or `*.json`:
+
+```yaml
+name: block-dangerous-shell
+event: before_shell
+command: "echo \"$MINI_A_SHELL_COMMAND\" | grep -E '(rm -rf|mkfs|dd if=)' >/dev/null && exit 1 || exit 0"
+timeout: 1500
+failBlocks: true
+```
+
+Common hook events:
+- `before_goal`
+- `after_goal`
+- `before_tool`
+- `after_tool`
+- `before_shell`
+- `after_shell`
+
+Load hooks from extra directories:
+
+```bash
+mini-a extrahooks=/path/to/team-hooks,/path/to/project-hooks
+```
+
+Notes:
+- Hooks are additive. mini-a merges hooks from the default folder and all `extrahooks` paths.
+- Matching hooks from multiple directories all run; hooks do not override each other the way commands and skills do.
+
+### 4. Keep custom files in your repo instead of your home folder
+
+This is useful for team-shared skills, commands, and hooks:
+
+```bash
+mini-a \
+  extracommands=.mini-a/commands \
+  extraskills=.mini-a/skills \
+  extrahooks=.mini-a/hooks
+```
+
+You can combine repo-local folders with the defaults in `~/.openaf-mini-a/` on the same run.
+
+---
+
 ## Browse the Gallery
 {: .section-title}
 

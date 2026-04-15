@@ -152,3 +152,17 @@
     ---
 
     using 'gh' close athe following PRs and delete the corresponding branches: {{args}}
+
+# -----------------------
+- name       : git-branch
+  title      : "/git-branch"
+  description: "Switch to a different branch in the current git repository. Passes the branch name directly to the model."
+  tags       : [git, cli, branch-management]
+  usage      : "/git-branch feature-xyz"
+  code       : |
+    ---
+    title: git branch
+    description: Switch to a different branch in the current git repository.
+    ---
+
+    change the current folder git repo branch to origin '{{args}}'
