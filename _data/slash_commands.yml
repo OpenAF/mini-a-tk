@@ -290,3 +290,243 @@
     - Any missing tests or risky patterns spotted in the diffs
 
     Use **bold** for high-risk items. Keep the tone factual and actionable.
+
+# -----------------------
+- name       : new-command
+  title      : "/new-command"
+  description: "Interactively build a new mini-a slash command file and save it to the commands directory."
+  tags       : [meta, commands, scaffold]
+  usage      : "/new-command"
+  code       : |
+    ---
+    name: new-command
+    description: Interactively build a new mini-a slash command file and save it to the commands directory.
+    tags: [meta, commands, scaffold]
+    ---
+
+    Create a new mini-a slash command file based on the user's instructions.
+
+    ## Step 1 — Gather command details
+
+    Use the `userInput` tool to collect the required information. If `userInput` is unavailable, ask via `AskUserQuestion` or plain text and wait for replies.
+
+    Ask for the following:
+
+    1. **Command name** — a short kebab-case identifier (e.g. `git-deploy`, `summarize-pr`). This becomes the filename and the value of the `name` field.
+    2. **Description** — one sentence shown in command listings describing what the command does.
+    3. **Tags** *(optional)* — comma-separated keywords (e.g. `git, review`).
+    4. **Instructions** — what the command should do; may be a rough description, a list of steps, or detailed prose. The agent will turn this into well-structured markdown steps.
+    5. **Output path** *(optional)* — where to save the file. Default: the same `commands/` directory as this file.
+
+    ## Step 2 — Draft the command file
+
+    Using the information collected, write the command file following this structure:
+
+    ```
+    ---
+    name: <name>
+    description: <description>
+    tags: [<tags>]   ← omit this line entirely if no tags were provided
+    ---
+
+    <one-sentence summary of what the command does>
+
+    ## Step 1 — <first major action>
+
+    <clear imperative prose; use bullet lists for sub-steps, code blocks for commands>
+
+    ## Step N — <final action>
+
+    <how to confirm or present the result to the user>
+    ```
+
+    ## Step 3 — Preview and confirm
+
+    Display the full generated file content using `showMessage` (or plain text if unavailable).
+
+    Ask the user to choose: **save**, **edit**, or **cancel**.
+
+    ## Step 4 — Write the file
+
+    Write the confirmed content to the output path. Confirm with the full path.
+
+# -----------------------
+- name       : new-hook
+  title      : "/new-hook"
+  description: "Interactively build a new mini-a hook file and save it to the hooks directory."
+  tags       : [meta, hooks, scaffold]
+  usage      : "/new-hook"
+  code       : |
+    ---
+    name: new-hook
+    description: Interactively build a new mini-a hook file and save it to the hooks directory.
+    tags: [meta, hooks, scaffold]
+    ---
+
+    Create a new mini-a hook file based on the user's instructions.
+
+    Hooks are YAML files that run shell commands at specific lifecycle events. They live in the `hooks/` directory and are activated when the file has a `.yaml` extension (disabled when renamed to `.yaml.disabled`).
+
+    ## Step 1 — Gather hook details
+
+    Use the `userInput` tool to collect the required information. Ask for:
+
+    1. **Hook name** — a short kebab-case identifier (e.g. `cost-tracker`, `log-shell`).
+    2. **Event** — one of: `before_goal`, `after_goal`, `before_shell`, `after_shell`, `before_tool`, `after_tool`.
+    3. **Command** — the shell command(s) to run.
+    4. **Inject output?** *(optional, default: false)* — if `true`, stdout is injected into the agent's context.
+    5. **Timeout** *(optional)* — max run time in milliseconds.
+    6. **Fail blocks?** *(optional, default: true)* — set `false` for logging/observability hooks.
+    7. **Start enabled or disabled?** — `.yaml` (enabled) or `.yaml.disabled` (disabled).
+
+    ## Step 2 — Draft the hook file
+
+    Compose the hook YAML:
+
+    ```yaml
+    event: <event>
+    command: |
+      <shell command(s)>
+    # injectOutput: true      ← include only if true
+    # timeout: 2000           ← include only if provided
+    # failBlocks: false       ← include only if false
+    ```
+
+    ## Step 3 — Preview and confirm
+
+    Display the full generated file content and ask the user to choose: **save**, **edit**, or **cancel**.
+
+    ## Step 4 — Write the file
+
+    Write to `<name>.yaml` or `<name>.yaml.disabled` in the `hooks/` directory. Confirm the path.
+
+# -----------------------
+- name       : new-skill
+  title      : "/new-skill"
+  description: "Interactively build a new mini-a skill and save it to the skills directory."
+  tags       : [meta, skills, scaffold]
+  usage      : "/new-skill"
+  code       : |
+    ---
+    name: new-skill
+    description: Interactively build a new mini-a skill and save it to the skills directory.
+    tags: [meta, skills, scaffold]
+    ---
+
+    Create a new mini-a skill based on the user's instructions.
+
+    Skills are reusable specialist prompts stored as `skills/<name>/SKILL.md`. When loaded, the skill's body replaces or extends the agent's system prompt, turning it into a focused expert.
+
+    ## Step 1 — Gather skill details
+
+    Use the `userInput` tool to collect the required information. Ask for:
+
+    1. **Skill name** — a short kebab-case identifier (e.g. `code-reviewer`, `sql-expert`).
+    2. **Version** — initial version string (default: `1.0.0`).
+    3. **Description** — 1–5 sentences describing what the skill does and when to use it.
+    4. **Allowed tools** *(optional)* — comma-separated list (e.g. `Read, Write, Bash`). Leave blank to allow all.
+    5. **Skill instructions** — what the agent should do, rules, examples, output format.
+
+    ## Step 2 — Draft the skill file
+
+    Compose `SKILL.md`:
+
+    ```
+    ---
+    name: <name>
+    version: <version>
+    description: |
+      <description>
+    allowed-tools:
+      - Read
+      # ... (omit section if no restriction)
+    ---
+
+    # <Skill Title>
+
+    ## Your Task
+
+    ## Process
+
+    1. <Step 1>
+    ...
+
+    ## Output Format
+    ```
+
+    ## Step 3 — Preview and confirm
+
+    Display the full generated file content and ask the user to choose: **save**, **edit**, or **cancel**.
+
+    ## Step 4 — Write the file
+
+    Create `skills/<name>/SKILL.md`. Confirm with the full path and remind the user:
+
+    ```
+    mini-a skill=<name> goal="your task here"
+    ```
+
+# -----------------------
+- name       : new-agent
+  title      : "/new-agent"
+  description: "Interactively build a new mini-a agent file and save it, following the standard agent template format."
+  tags       : [meta, agents, scaffold]
+  usage      : "/new-agent"
+  code       : |
+    ---
+    name: new-agent
+    description: Interactively build a new mini-a agent file and save it, following the standard agent template format.
+    tags: [meta, agents, scaffold]
+    ---
+
+    Create a new mini-a agent file based on the user's instructions.
+
+    Agent files are Markdown files with a YAML front-matter block that configures identity, model, capabilities, MCP tools, constraints, knowledge, and persona.
+
+    ## Step 1 — Gather agent details
+
+    Use the `userInput` tool to collect the required information. Ask for:
+
+    1. **Name** — a short kebab-case identifier (e.g. `code-reviewer`, `daily-standup`).
+    2. **Description** — one sentence explaining what the agent does.
+    3. **Default goal** — the task the agent performs when invoked without an explicit `goal=`.
+    4. **Capabilities** — which to enable (default: `useutils` + `usetools`): `useshell`, `readwrite`.
+    5. **MCP tools** *(optional)* — MCP connections to expose (`ojob`, `sse`, `remote`, `stdio`).
+    6. **Constraints** *(optional)* — behavioural rules appended to the system prompt.
+    7. **Knowledge** *(optional)* — domain-specific background text injected at session start.
+    8. **Persona / youare** *(optional)* — replaces the default "You are a helpful assistant" opener.
+    9. **Model** *(optional)* — override `OAF_MODEL` for this agent.
+
+    ## Step 2 — Draft the agent file
+
+    ```
+    ---
+    name        : <name>
+    description : <description>
+    capabilities:
+      - useutils
+      - usetools
+    tools:
+      - type   : ojob
+        options:
+          job  : mcps/mcp-time.yaml
+    constraints:
+      - Prefer tool-grounded answers over assumptions.
+      - Be explicit when information is missing or uncertain.
+    ---
+
+    <default goal>
+    ```
+
+    ## Step 3 — Preview and confirm
+
+    Display the full generated file content and ask the user to choose: **save**, **edit**, or **cancel**.
+
+    ## Step 4 — Write the file
+
+    Write `<name>.md` to the output path. Confirm with the full path and remind the user:
+
+    ```
+    mini-a agent=<filename>
+    mini-a agent=<filename> goal="override goal here"
+    ```
