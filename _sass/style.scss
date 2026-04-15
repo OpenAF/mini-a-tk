@@ -308,6 +308,7 @@
   }
 
   .card-code {
+    position: relative;
     margin-top: 0.5rem;
     font-size: 0.82rem;
 
@@ -368,6 +369,8 @@ pre.highlight {
 
 .highlighter-rouge:hover .code-copy-button,
 .highlighter-rouge:focus-within .code-copy-button,
+.card-code:hover .code-copy-button,
+.card-code:focus-within .code-copy-button,
 pre.highlight:hover .code-copy-button,
 pre.highlight:focus-within .code-copy-button {
   opacity: 1;

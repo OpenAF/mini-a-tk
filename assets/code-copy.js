@@ -1,4 +1,8 @@
 (function () {
+  function isStandaloneCodeBlock(block) {
+    return !block.closest(".card-code");
+  }
+
   function getCopyTarget(block) {
     return block.querySelector("pre code") || block.querySelector("code");
   }
@@ -46,17 +50,29 @@
   }
 
   function initCodeCopyButtons() {
+    document.querySelectorAll(".card-code").forEach(addCopyButton);
+
     document
       .querySelectorAll(".highlighter-rouge, pre.highlight")
-      .forEach(addCopyButton);
+      .forEach(function (block) {
+        if (isStandaloneCodeBlock(block)) {
+          addCopyButton(block);
+        }
+      });
   }
 
   // Re-run when <details> elements are opened (gallery cards use <details>)
   document.addEventListener("toggle", function (event) {
     if (event.target && event.target.tagName === "DETAILS" && event.target.open) {
+      event.target.querySelectorAll(".card-code").forEach(addCopyButton);
+
       event.target
         .querySelectorAll(".highlighter-rouge, pre.highlight")
-        .forEach(addCopyButton);
+        .forEach(function (block) {
+          if (isStandaloneCodeBlock(block)) {
+            addCopyButton(block);
+          }
+        });
     }
   }, true);
 
