@@ -1,33 +1,92 @@
-# ------------
-- name: review
-  title: "/review"
-  description: "Trigger a code review on a file or directory. Passes the target path and any flags directly to the model."
-  tags: [code, review, git]
-  usage: "/review src/api.js --security"
-  code: |
-    Review target: {{arg1}}
-    Flags: {{args}}
+# -----------------------
+- name       : git-commit
+  title      : "/git-commit"
+  description: "Generate a meaningful commit message based on the currently staged changes and commit them. Follows conventional commit format and best practices."
+  tags       : [git, commit, productivity]
+  usage      : "/git-commit"
+  code       : |
+    ---
+    name: git-commit
+    description: Generate a meaningful commit message based on the currently staged changes and commit them.
+    ---
 
-    Perform a thorough code review of {{arg1}}.
-    Focus on: correctness, security, performance, and readability.
-    Categorize findings as critical, warning, or suggestion.
-    Cite file and line numbers for every finding.
+    Commit the currently staged files with a meaningful commit message derived from the staged diff.
 
-# ------------
-- name: commit
-  title: "/commit"
-  description: "Generates a conventional commit message for the current staged changes. Optionally accepts a scope."
-  tags: [git, commit, conventional-commits]
-  usage: "/commit auth"
-  code: |
-    Scope (optional): {{arg1}}
+    ## Step 1 — Check for staged changes
 
-    Inspect the current staged git diff and write a conventional commit message.
-    Format: <type>(<scope>): <short summary>
+    Run `git diff --cached --name-status`.
 
-    Types: feat, fix, chore, docs, refactor, test, perf, ci, build.
-    Keep the subject line under 72 characters.
-    Add a body paragraph if the change is non-trivial.
+    If no files are staged, stop and tell the user: _"No staged changes found. Use `git add` to stage files before committing."_
+
+    ## Step 2 — Gather diff information
+
+    Run:
+
+    - `git diff --cached --stat` — lines changed per file
+    - `git diff --cached` — full diff (cap at 300 lines if large)
+    - `git rev-parse --abbrev-ref HEAD` — current branch name
+
+    ## Step 3 — Compose the commit message
+
+    Analyse the diff and write a commit message:
+
+    - **Subject** (line 1): `<type>(<scope>): <short imperative summary>` — max 72 chars, no trailing period
+    - **Body** (optional, separated by a blank line): explain *what* and *why*; wrap at 72 chars
+
+    Pick the type that best fits:
+
+    | Type | Use when |
+    |---|---|
+    | `feat` | New feature or behaviour |
+    | `fix` | Bug fix |
+    | `refactor` | Code restructure, no behaviour change |
+    | `test` | Adding or updating tests |
+    | `docs` | Documentation only |
+    | `chore` | Build, config, deps, tooling |
+    | `perf` | Performance improvement |
+    | `style` | Formatting/whitespace only |
+
+    Do **not** add AI attribution or "Co-authored-by" lines.
+
+    ## Step 4 — Show the proposed commit message
+
+    Use the `showMessage` tool to display the proposed commit message to the user.
+
+    Call `showMessage` with the full commit message text so the user can read it clearly before deciding.
+
+    ## Step 5 — Ask the user to confirm
+
+    Use the `userInput` tool to ask the user whether to proceed:
+
+    ```json
+    {
+      "operation": "choose",
+      "prompt": "Commit with the message above?",
+      "options": ["yes", "edit", "cancel"]
+    }
+    ```
+
+    If `userInput` is **not** available, use `AskUserQuestion` to ask:
+    > "Commit with the message above? Reply **yes**, **edit**, or **cancel**."
+
+    If neither tool is available, ask as plain text and wait for the reply.
+
+    - **yes** — commit using the message
+    - **edit** — ask the user for a revised message (via `userInput` or `AskUserQuestion`), then commit with the new version
+    - **cancel** — abort and do nothing
+
+    ## Step 6 — Commit and confirm
+
+    Run `git commit` using only staged files (no `-a` flag):
+
+    - No body: `git commit -m "<subject>"`
+    - With body: `git commit -m "<subject>" -m "<body>"`
+
+    After a successful commit, run `git log -1 --oneline` and show the result.
+
+    Remind the user to `git push` if they want to share their changes.
+
+    Notes: 'echo' commands are not visible to the user, so use `showMessage` or `userInput` to communicate important information.
 
 # -------------
 - name: explain
