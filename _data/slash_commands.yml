@@ -105,21 +105,6 @@
     4. Any gotchas or non-obvious behaviour
 
 # ---------------
-- name: summarize
-  title: "/summarize"
-  description: "Summarizes the current conversation or a provided document. Useful for long sessions or handing off context."
-  tags: [context, productivity, summary]
-  usage: "/summarize"
-  code: |
-    {{#if arg1}}Target document: {{arg1}}{{/if}}
-
-    Produce a concise summary of {{#if arg1}}{{arg1}}{{else}}the conversation so far{{/if}}.
-    Include:
-    - Key decisions made
-    - Open questions or blockers
-    - Next steps
-
-# ---------------
 - name: translate
   title: "/translate"
   description: "Translates code from one language or format to another (e.g., JS → TS, JSON → YAML, Python 2 → 3)."
