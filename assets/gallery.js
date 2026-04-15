@@ -56,6 +56,19 @@
 
     if (!cards.length) return;
 
+    cards
+      .slice()
+      .sort(function (a, b) {
+        var titleA = normalize(a.dataset.title || a.textContent);
+        var titleB = normalize(b.dataset.title || b.textContent);
+        return titleA.localeCompare(titleB);
+      })
+      .forEach(function (card) {
+        grid.appendChild(card);
+      });
+
+    cards = Array.prototype.slice.call(grid.querySelectorAll(".gallery-card"));
+
     cards.forEach(function (card, cardIndex) {
       var baseId = slugify(
         [
