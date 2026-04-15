@@ -1,0 +1,107 @@
+- name: code-review-checklist
+  title: "Code Review Checklist"
+  description: "A structured skill that guides the model through a rigorous code review checklist covering correctness, security, and performance."
+  tags: [code, review, quality]
+  usage: "/code-review-checklist src/payments/"
+  code: |
+    Target: {{arg1}}
+
+    Conduct a structured code review of {{arg1}} using the following checklist:
+
+    ## Correctness
+    - [ ] Logic is accurate and matches the stated intent
+    - [ ] Edge cases and error conditions are handled
+    - [ ] No off-by-one errors or null pointer risks
+
+    ## Security
+    - [ ] No hard-coded secrets or credentials
+    - [ ] Inputs are validated and sanitized
+    - [ ] Authentication and authorisation checks are present where needed
+    - [ ] No SQL/command injection risks
+
+    ## Performance
+    - [ ] No unnecessary loops or N+1 queries
+    - [ ] Data structures are appropriate for the access pattern
+    - [ ] Expensive operations are cached where suitable
+
+    ## Maintainability
+    - [ ] Code is readable and self-explanatory
+    - [ ] Functions are small and single-purpose
+    - [ ] Tests exist for critical paths
+
+    Report findings with file name, line number, severity, and suggested fix.
+
+- name: explain-code
+  title: "Explain Code"
+  description: "Explains a piece of code, algorithm, or module in plain English. Suitable for onboarding or documentation generation."
+  tags: [docs, learning, onboarding]
+  usage: "/explain-code src/algo/kd-tree.js"
+  code: |
+    Target: {{arg1}}
+
+    Explain the code at {{arg1}} as if teaching a developer who is new to this
+    codebase but experienced with programming in general.
+
+    Structure your explanation as follows:
+    1. **One-line summary** — what this code does
+    2. **Context** — where it fits in the broader system
+    3. **Key concepts** — any algorithms, patterns, or domain terms
+    4. **Walk-through** — step-by-step explanation of the main logic
+    5. **Gotchas** — anything surprising or non-obvious
+
+- name: refactor
+  title: "Refactor Assistant"
+  description: "Suggests targeted refactoring improvements for a file or function. Preserves behaviour while improving readability and structure."
+  tags: [code, refactor, quality]
+  usage: "/refactor src/legacy/parser.js"
+  code: |
+    Target: {{arg1}}
+
+    Refactor {{arg1}} to improve readability, maintainability, and structure
+    without changing observable behaviour.
+
+    Apply these principles where applicable:
+    - Extract long functions into smaller, named helpers
+    - Replace magic numbers and strings with named constants
+    - Remove dead code and redundant comments
+    - Simplify complex conditionals
+    - Improve variable and function names
+
+    For each change, explain the motivation.
+    Present the refactored code followed by a diff summary.
+
+- name: generate-readme
+  title: "README Generator"
+  description: "Generates a comprehensive README.md for a project from its source files and structure."
+  tags: [docs, markdown, onboarding]
+  usage: "/generate-readme"
+  code: |
+    Inspect the project in the current directory and generate a comprehensive
+    README.md with the following sections:
+
+    1. **Project name and one-line description**
+    2. **Features** — bullet list of key capabilities
+    3. **Prerequisites** — required tools and versions
+    4. **Installation** — copy-paste install commands
+    5. **Usage** — the most common commands with examples
+    6. **Configuration** — key environment variables or config files
+    7. **Contributing** — brief contribution guide
+    8. **License**
+
+    Base all content on the actual code and existing documentation.
+    Do not invent features that are not present.
+
+- name: sql-explain
+  title: "SQL Query Explainer"
+  description: "Explains and optimises a SQL query. Identifies potential performance issues and suggests improvements with an execution plan analysis."
+  tags: [sql, database, performance]
+  usage: "/sql-explain"
+  code: |
+    SQL query:
+    {{arg1}}
+
+    1. Explain what this query does in plain English.
+    2. Identify potential performance issues (missing indexes, full-table scans,
+       N+1 subquery patterns, non-sargable predicates).
+    3. Suggest an optimised version with comments explaining each change.
+    4. List the indexes that would most improve this query's performance.

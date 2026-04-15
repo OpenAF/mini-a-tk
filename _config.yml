@@ -1,0 +1,44 @@
+title: mini-a toolkit
+tagline: "Agents, slash commands, hooks & skills — ready to use."
+description: >-
+  A curated gallery of reusable mini-a agents, slash commands, hooks, and skills.
+  Browse, search, and copy-paste into your own projects.
+baseurl: ""
+url: "https://tk.mini-a.ai"
+
+theme: minima
+
+minima:
+  skin: auto
+  nav_pages:
+    - agents.md
+    - slash-commands.md
+    - hooks.md
+    - skills.md
+    - search.md
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+permalink: pretty
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
+
+ga4_measurement_id: ""

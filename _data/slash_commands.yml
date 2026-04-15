@@ -1,0 +1,86 @@
+- name: review
+  title: "/review"
+  description: "Trigger a code review on a file or directory. Passes the target path and any flags directly to the model."
+  tags: [code, review, git]
+  usage: "/review src/api.js --security"
+  code: |
+    Review target: {{arg1}}
+    Flags: {{args}}
+
+    Perform a thorough code review of {{arg1}}.
+    Focus on: correctness, security, performance, and readability.
+    Categorize findings as critical, warning, or suggestion.
+    Cite file and line numbers for every finding.
+
+- name: commit
+  title: "/commit"
+  description: "Generates a conventional commit message for the current staged changes. Optionally accepts a scope."
+  tags: [git, commit, conventional-commits]
+  usage: "/commit auth"
+  code: |
+    Scope (optional): {{arg1}}
+
+    Inspect the current staged git diff and write a conventional commit message.
+    Format: <type>(<scope>): <short summary>
+
+    Types: feat, fix, chore, docs, refactor, test, perf, ci, build.
+    Keep the subject line under 72 characters.
+    Add a body paragraph if the change is non-trivial.
+
+- name: explain
+  title: "/explain"
+  description: "Explains a file, function, or code snippet in plain language. Great for onboarding or understanding unfamiliar code."
+  tags: [code, docs, learning]
+  usage: "/explain src/utils/tokenizer.js"
+  code: |
+    Target: {{arg1}}
+
+    Explain {{arg1}} in plain language suitable for a developer unfamiliar
+    with this codebase. Cover:
+    1. Purpose and responsibility
+    2. Inputs and outputs
+    3. Key algorithms or patterns used
+    4. Any gotchas or non-obvious behaviour
+
+- name: summarize
+  title: "/summarize"
+  description: "Summarizes the current conversation or a provided document. Useful for long sessions or handing off context."
+  tags: [context, productivity, summary]
+  usage: "/summarize"
+  code: |
+    {{#if arg1}}Target document: {{arg1}}{{/if}}
+
+    Produce a concise summary of {{#if arg1}}{{arg1}}{{else}}the conversation so far{{/if}}.
+    Include:
+    - Key decisions made
+    - Open questions or blockers
+    - Next steps
+
+- name: translate
+  title: "/translate"
+  description: "Translates code from one language or format to another (e.g., JS → TS, JSON → YAML, Python 2 → 3)."
+  tags: [code, refactor, migration]
+  usage: "/translate config.json yaml"
+  code: |
+    Source: {{arg1}}
+    Target format: {{arg2}}
+
+    Translate {{arg1}} to {{arg2}}.
+    Preserve all semantics exactly. Add comments where the translation
+    requires non-obvious choices or where idioms differ between formats.
+
+- name: deps
+  title: "/deps"
+  description: "Checks project dependencies for outdated versions and known vulnerabilities. Works with npm, pip, and Maven."
+  tags: [dependencies, security, devops]
+  usage: "/deps"
+  code: |
+    Inspect the dependency manifest in the current directory
+    (package.json, requirements.txt, pom.xml, or similar).
+
+    For each dependency:
+    1. Check if a newer version is available.
+    2. Flag any known CVEs.
+    3. Suggest the upgrade command.
+
+    Output a markdown table with columns: Package | Current | Latest | CVEs.

@@ -1,0 +1,20 @@
+---
+layout: none
+---
+[
+{%- assign first = true -%}
+{%- for item in site.data.agents -%}
+{%- unless first -%},{%- endunless -%}
+{%- assign first = false -%}
+{"title":{{ item.title | jsonify }},"url":{{ '/agents/' | relative_url | jsonify }},"type":"agent","content":{{ item.description | append: " " | append: item.usage | append: " " | append: item.code | strip_html | jsonify }}}
+{%- endfor -%}
+{%- for item in site.data.slash_commands -%}
+,{"title":{{ item.title | jsonify }},"url":{{ '/slash-commands/' | relative_url | jsonify }},"type":"slash-command","content":{{ item.description | append: " " | append: item.usage | append: " " | append: item.code | strip_html | jsonify }}}
+{%- endfor -%}
+{%- for item in site.data.hooks -%}
+,{"title":{{ item.title | jsonify }},"url":{{ '/hooks/' | relative_url | jsonify }},"type":"hook","content":{{ item.description | append: " " | append: item.event | append: " " | append: item.code | strip_html | jsonify }}}
+{%- endfor -%}
+{%- for item in site.data.skills -%}
+,{"title":{{ item.title | jsonify }},"url":{{ '/skills/' | relative_url | jsonify }},"type":"skill","content":{{ item.description | append: " " | append: item.usage | append: " " | append: item.code | strip_html | jsonify }}}
+{%- endfor -%}
+]
