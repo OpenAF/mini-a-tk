@@ -385,9 +385,17 @@ pre.highlight {
 .highlighter-rouge:focus-within .code-copy-button,
 .card-code:hover .code-copy-button,
 .card-code:focus-within .code-copy-button,
-.gallery-card--isolated .code-copy-button,
 pre.highlight:hover .code-copy-button,
 pre.highlight:focus-within .code-copy-button {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.gallery-card--isolated .code-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

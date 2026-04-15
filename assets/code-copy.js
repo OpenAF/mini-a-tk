@@ -61,6 +61,9 @@
       });
   }
 
+  window.initCodeCopyButtons = initCodeCopyButtons;
+  window.addCodeCopyButton = addCopyButton;
+
   // Re-run when <details> elements are opened (gallery cards use <details>)
   document.addEventListener("toggle", function (event) {
     if (event.target && event.target.tagName === "DETAILS" && event.target.open) {

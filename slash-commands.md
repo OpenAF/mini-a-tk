@@ -34,7 +34,7 @@ mini-a extracommands=/path/to/team-commands
     <span class="tag">{{ tag }}</span>
     {%- endfor -%}
   </div>
-  <div class="card-code">
+  <div class="card-code" hidden>
 {% highlight markdown %}{{ item.code }}{% endhighlight %}
   </div>
   <div class="card-usage">

@@ -180,7 +180,7 @@
         card.classList.toggle("gallery-card--isolated", showIsolated && card === isolatedCard);
 
         if (codeBlock) {
-          codeBlock.style.display = showIsolated && card === isolatedCard ? "" : "none";
+          codeBlock.hidden = !(showIsolated && card === isolatedCard);
         }
 
         if (show) visible += 1;
@@ -217,6 +217,9 @@
 
       isolatedItemId = itemId;
       applyState();
+      if (window.initCodeCopyButtons) {
+        window.initCodeCopyButtons();
+      }
 
       if (options && options.pushHistory === false) return;
 
@@ -293,6 +296,9 @@
       setActiveFilterButton(activeType);
       isolatedItemId = initialItemId;
       applyState();
+      if (window.initCodeCopyButtons) {
+        window.initCodeCopyButtons();
+      }
       window.history.replaceState(buildHistoryState("item"), "", setHash(initialItemId));
       return;
     }

@@ -73,7 +73,7 @@ permalink: /
       <span class="tag">{{ tag }}</span>
       {%- endfor -%}
     </div>
-    <div class="card-code">
+    <div class="card-code" hidden>
 {% highlight markdown %}{{ item.code }}{% endhighlight %}
     </div>
     <div class="card-usage">
@@ -94,7 +94,7 @@ permalink: /
       <span class="tag">{{ tag }}</span>
       {%- endfor -%}
     </div>
-    <div class="card-code">
+    <div class="card-code" hidden>
 {% highlight markdown %}{{ item.code }}{% endhighlight %}
     </div>
     <div class="card-usage">
@@ -115,7 +115,7 @@ permalink: /
       <span class="tag">{{ tag }}</span>
       {%- endfor -%}
     </div>
-    <div class="card-code">
+    <div class="card-code" hidden>
 {% highlight yaml %}{{ item.code }}{% endhighlight %}
     </div>
     <div class="card-usage">
@@ -136,7 +136,7 @@ permalink: /
       <span class="tag">{{ tag }}</span>
       {%- endfor -%}
     </div>
-    <div class="card-code">
+    <div class="card-code" hidden>
 {% highlight markdown %}{{ item.code }}{% endhighlight %}
     </div>
     <div class="card-usage">
