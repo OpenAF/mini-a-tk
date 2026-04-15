@@ -52,117 +52,27 @@ Use the default home folder when you want the customization available in every s
 mkdir -p ~/.openaf-mini-a/commands ~/.openaf-mini-a/skills ~/.openaf-mini-a/hooks
 ```
 
-### 1. Add a slash command
+<details><summary><strong>1. Add a slash command</strong></summary><p>Create a markdown template in <code>~/.openaf-mini-a/commands/&lt;name&gt;.md</code>:</p><pre><code class="language-markdown">Follow these instructions exactly.
 
-Create a markdown template in `~/.openaf-mini-a/commands/<name>.md`:
+Target: &#123;&#123;arg1&#125;&#125;
+Raw args: &#123;&#123;args&#125;&#125;
+Parsed args: &#123;&#123;argv&#125;&#125;</code></pre><p>Run it in the console:</p><pre><code class="language-bash">/my-command repo-a --fast "include docs"</code></pre><p>Run it directly from the CLI:</p><pre><code class="language-bash">mini-a exec="/my-command repo-a --fast \"include docs\""</code></pre><p>Load commands from extra directories:</p><pre><code class="language-bash">mini-a extracommands=/path/to/team-commands,/path/to/project-commands</code></pre><p>Notes:</p><ul><li>Default commands in <code>~/.openaf-mini-a/commands/</code> win over <code>extracommands</code>.</li><li>Earlier <code>extracommands</code> paths win over later ones.</li><li>Built-ins such as <code>/help</code> still win over custom commands.</li></ul></details>
 
-```markdown
-Follow these instructions exactly.
+<details><summary><strong>2. Add a skill</strong></summary><p>mini-a supports two skill layouts:</p><pre><code>~/.openaf-mini-a/skills/my-skill/SKILL.md
+~/.openaf-mini-a/skills/my-skill.md</code></pre><p>Example single-file skill:</p><pre><code class="language-markdown">Review the current change carefully.
+Focus on correctness, edge cases, and missing tests.</code></pre><p>Invoke it with either form:</p><pre><code class="language-bash">/my-skill src/auth
+$my-skill src/auth</code></pre><p>Load skills from extra directories:</p><pre><code class="language-bash">mini-a extraskills=/path/to/shared-skills,/path/to/project-skills</code></pre><p>Notes:</p><ul><li>Default skills in <code>~/.openaf-mini-a/skills/</code> win over <code>extraskills</code>.</li><li>If a skill and a slash command share the same name, the skill wins.</li><li>Use <code>/skills</code> or <code>/skills &lt;prefix&gt;</code> to list discovered skills.</li></ul></details>
 
-Target: {{arg1}}
-Raw args: {{args}}
-Parsed args: {{argv}}
-```
-
-Run it in the console:
-
-```bash
-/my-command repo-a --fast "include docs"
-```
-
-Run it directly from the CLI:
-
-```bash
-mini-a exec="/my-command repo-a --fast \"include docs\""
-```
-
-Load commands from extra directories:
-
-```bash
-mini-a extracommands=/path/to/team-commands,/path/to/project-commands
-```
-
-Notes:
-- Default commands in `~/.openaf-mini-a/commands/` win over `extracommands`.
-- Earlier `extracommands` paths win over later ones.
-- Built-ins such as `/help` still win over custom commands.
-
-### 2. Add a skill
-
-mini-a supports two skill layouts:
-
-```text
-~/.openaf-mini-a/skills/my-skill/SKILL.md
-~/.openaf-mini-a/skills/my-skill.md
-```
-
-Example single-file skill:
-
-```markdown
-Review the current change carefully.
-Focus on correctness, edge cases, and missing tests.
-```
-
-Invoke it with either form:
-
-```bash
-/my-skill src/auth
-$my-skill src/auth
-```
-
-Load skills from extra directories:
-
-```bash
-mini-a extraskills=/path/to/shared-skills,/path/to/project-skills
-```
-
-Notes:
-- Default skills in `~/.openaf-mini-a/skills/` win over `extraskills`.
-- If a skill and a slash command share the same name, the skill wins.
-- Use `/skills` or `/skills <prefix>` to list discovered skills.
-
-### 3. Add a hook
-
-Create a hook definition in `~/.openaf-mini-a/hooks/*.yaml`, `*.yml`, or `*.json`:
-
-```yaml
-name: block-dangerous-shell
+<details><summary><strong>3. Add a hook</strong></summary><p>Create a hook definition in <code>~/.openaf-mini-a/hooks/*.yaml</code>, <code>*.yml</code>, or <code>*.json</code>:</p><pre><code class="language-yaml">name: block-dangerous-shell
 event: before_shell
-command: "echo \"$MINI_A_SHELL_COMMAND\" | grep -E '(rm -rf|mkfs|dd if=)' >/dev/null && exit 1 || exit 0"
+command: "echo \"$MINI_A_SHELL_COMMAND\" | grep -E '(rm -rf|mkfs|dd if=)' &gt;/dev/null &amp;&amp; exit 1 || exit 0"
 timeout: 1500
-failBlocks: true
-```
+failBlocks: true</code></pre><p>Common hook events:</p><ul><li><code>before_goal</code></li><li><code>after_goal</code></li><li><code>before_tool</code></li><li><code>after_tool</code></li><li><code>before_shell</code></li><li><code>after_shell</code></li></ul><p>Load hooks from extra directories:</p><pre><code class="language-bash">mini-a extrahooks=/path/to/team-hooks,/path/to/project-hooks</code></pre><p>Notes:</p><ul><li>Hooks are additive. mini-a merges hooks from the default folder and all <code>extrahooks</code> paths.</li><li>Matching hooks from multiple directories all run; hooks do not override each other the way commands and skills do.</li></ul></details>
 
-Common hook events:
-- `before_goal`
-- `after_goal`
-- `before_tool`
-- `after_tool`
-- `before_shell`
-- `after_shell`
-
-Load hooks from extra directories:
-
-```bash
-mini-a extrahooks=/path/to/team-hooks,/path/to/project-hooks
-```
-
-Notes:
-- Hooks are additive. mini-a merges hooks from the default folder and all `extrahooks` paths.
-- Matching hooks from multiple directories all run; hooks do not override each other the way commands and skills do.
-
-### 4. Keep custom files in your repo instead of your home folder
-
-This is useful for team-shared skills, commands, and hooks:
-
-```bash
-mini-a \
+<details><summary><strong>4. Keep custom files in your repo instead of your home folder</strong></summary><p>This is useful for team-shared skills, commands, and hooks:</p><pre><code class="language-bash">mini-a \
   extracommands=.mini-a/commands \
   extraskills=.mini-a/skills \
-  extrahooks=.mini-a/hooks
-```
-
-You can combine repo-local folders with the defaults in `~/.openaf-mini-a/` on the same run.
+  extrahooks=.mini-a/hooks</code></pre><p>You can combine repo-local folders with the defaults in <code>~/.openaf-mini-a/</code> on the same run.</p></details>
 
 ---
 
