@@ -7,6 +7,7 @@
   if (!grid) return;
 
   var cards = Array.prototype.slice.call(grid.querySelectorAll(".gallery-card"));
+  var codeDetails = Array.prototype.slice.call(grid.querySelectorAll(".card-code-details"));
   var activeType = "all";
   var activeQuery = "";
 
@@ -60,6 +61,18 @@
       applyFilters();
     });
   }
+
+  codeDetails.forEach(function (details) {
+    details.addEventListener("toggle", function () {
+      if (!details.open) return;
+
+      codeDetails.forEach(function (other) {
+        if (other !== details) {
+          other.open = false;
+        }
+      });
+    });
+  });
 
   applyFilters();
 })();
