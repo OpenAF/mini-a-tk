@@ -17,6 +17,10 @@ minima:
     - skills.md
     - search.md
 
+external_nav:
+  - title: Docs
+    url: "https://mini-a.ai/"
+
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
