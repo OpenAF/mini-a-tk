@@ -51,3 +51,5 @@ mini-a extrahooks=/path/to/team-hooks,/path/to/project-hooks
 </div>
 {%- endfor -%}
 </div>
+
+<script src="{{ '/assets/gallery.js' | relative_url }}" defer></script>

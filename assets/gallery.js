@@ -1,78 +1,312 @@
 (function () {
-  var grid = document.getElementById("gallery-grid");
-  var emptyMsg = document.getElementById("gallery-empty");
-  var filterBtns = document.querySelectorAll(".filter-btn");
-  var searchInput = document.getElementById("gallery-search");
+  var grids = Array.prototype.slice.call(
+    document.querySelectorAll(".gallery-grid, .category-grid")
+  );
+  var galleryStateKey = "__galleryState";
 
-  if (!grid) return;
-
-  var cards = Array.prototype.slice.call(grid.querySelectorAll(".gallery-card"));
-  var codeDetails = Array.prototype.slice.call(grid.querySelectorAll(".card-code-details"));
-  var activeType = "all";
-  var activeQuery = "";
+  if (!grids.length) return;
 
   function normalize(str) {
     return (str || "").toLowerCase();
   }
 
-  function cardMatchesType(card) {
-    if (activeType === "all") return true;
-    return card.dataset.type === activeType;
+  function slugify(str) {
+    return normalize(str)
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 
-  function cardMatchesQuery(card) {
-    if (!activeQuery) return true;
-    var haystack = [
-      card.dataset.name,
-      card.dataset.title,
-      card.dataset.description,
-      card.dataset.tags,
-      card.dataset.type
-    ].join(" ");
-    return normalize(haystack).indexOf(activeQuery) !== -1;
-  }
+  function parseHash() {
+    var match = window.location.hash.match(/^#item=(.+)$/);
+    if (!match) return null;
 
-  function applyFilters() {
-    var visible = 0;
-
-    cards.forEach(function (card) {
-      var show = cardMatchesType(card) && cardMatchesQuery(card);
-      card.style.display = show ? "" : "none";
-      if (show) visible++;
-    });
-
-    if (emptyMsg) {
-      emptyMsg.style.display = visible === 0 ? "" : "none";
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (err) {
+      return null;
     }
   }
 
-  filterBtns.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      filterBtns.forEach(function (b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      activeType = btn.dataset.type || "all";
-      applyFilters();
-    });
-  });
+  function setHash(itemId) {
+    var nextUrl = window.location.pathname + window.location.search;
+    if (itemId) {
+      nextUrl += "#item=" + encodeURIComponent(itemId);
+    }
+    return nextUrl;
+  }
 
-  if (searchInput) {
-    searchInput.addEventListener("input", function () {
-      activeQuery = normalize(searchInput.value.trim());
-      applyFilters();
+  function restoreScroll(scrollY) {
+    if (typeof scrollY !== "number") return;
+
+    window.requestAnimationFrame(function () {
+      window.scrollTo(0, scrollY);
     });
   }
 
-  codeDetails.forEach(function (details) {
-    details.addEventListener("toggle", function () {
-      if (!details.open) return;
+  function setupGallery(grid, index) {
+    var cards = Array.prototype.slice.call(grid.querySelectorAll(".gallery-card"));
+    var codeDetails = Array.prototype.slice.call(grid.querySelectorAll(".card-code-details"));
+    var emptyMsg = document.getElementById("gallery-empty");
+    var filterBtns = Array.prototype.slice.call(document.querySelectorAll(".filter-btn"));
+    var searchInput = document.getElementById("gallery-search");
+    var gridId = grid.id || "gallery-" + index;
+    var activeType = "all";
+    var activeQuery = "";
+    var isolatedItemId = null;
+    var knownIds = {};
 
-      codeDetails.forEach(function (other) {
-        if (other !== details) {
-          other.open = false;
+    if (!cards.length) return;
+
+    cards.forEach(function (card, cardIndex) {
+      var baseId = slugify(
+        [
+          card.dataset.type || "",
+          card.dataset.name || "",
+          card.dataset.title || "",
+          card.querySelector(".card-title") ? card.querySelector(".card-title").textContent : ""
+        ].join("-")
+      ) || "item-" + cardIndex;
+      var uniqueId = baseId;
+      var suffix = 2;
+
+      while (knownIds[uniqueId]) {
+        uniqueId = baseId + "-" + suffix;
+        suffix += 1;
+      }
+
+      knownIds[uniqueId] = true;
+      card.dataset.galleryId = uniqueId;
+      card.classList.add("gallery-card--interactive");
+
+      var closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "gallery-card-close";
+      closeButton.setAttribute("aria-label", "Back to gallery");
+      closeButton.textContent = "Close";
+      closeButton.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (
+          history.state &&
+          history.state[galleryStateKey] &&
+          history.state[galleryStateKey].gridId === gridId &&
+          history.state[galleryStateKey].view === "item"
+        ) {
+          window.history.back();
+          return;
         }
+
+        isolatedItemId = null;
+        applyState();
+        window.history.replaceState(
+          buildHistoryState("grid"),
+          "",
+          setHash(null)
+        );
+      });
+
+      card.insertBefore(closeButton, card.firstChild);
+    });
+
+    function getCardById(itemId) {
+      return cards.find(function (card) {
+        return card.dataset.galleryId === itemId;
+      }) || null;
+    }
+
+    function cardMatchesType(card) {
+      if (activeType === "all") return true;
+      return card.dataset.type === activeType;
+    }
+
+    function cardMatchesQuery(card) {
+      if (!activeQuery) return true;
+      var haystack = [
+        card.dataset.name,
+        card.dataset.title,
+        card.dataset.description,
+        card.dataset.tags,
+        card.dataset.type,
+        card.textContent
+      ].join(" ");
+      return normalize(haystack).indexOf(activeQuery) !== -1;
+    }
+
+    function setActiveFilterButton(type) {
+      filterBtns.forEach(function (btn) {
+        btn.classList.toggle("active", (btn.dataset.type || "all") === type);
+      });
+    }
+
+    function buildHistoryState(view) {
+      return {
+        galleryPath: window.location.pathname,
+        [galleryStateKey]: {
+          gridId: gridId,
+          view: view,
+          activeType: activeType,
+          activeQuery: activeQuery,
+          isolatedItemId: isolatedItemId,
+          scrollY: window.scrollY
+        }
+      };
+    }
+
+    function syncCurrentHistoryState() {
+      if (!window.history.replaceState) return;
+
+      var currentUrl = isolatedItemId ? setHash(isolatedItemId) : setHash(null);
+      window.history.replaceState(
+        buildHistoryState(isolatedItemId ? "item" : "grid"),
+        "",
+        currentUrl
+      );
+    }
+
+    function applyState() {
+      var visible = 0;
+      var isolatedCard = isolatedItemId ? getCardById(isolatedItemId) : null;
+      var showIsolated = Boolean(isolatedCard);
+
+      grid.classList.toggle("gallery-grid--isolated", showIsolated);
+
+      cards.forEach(function (card) {
+        var show = showIsolated
+          ? card === isolatedCard
+          : cardMatchesType(card) && cardMatchesQuery(card);
+
+        card.style.display = show ? "" : "none";
+        card.classList.toggle("gallery-card--isolated", showIsolated && card === isolatedCard);
+        if (show) visible += 1;
+      });
+
+      if (emptyMsg) {
+        emptyMsg.style.display = !showIsolated && visible === 0 ? "" : "none";
+      }
+    }
+
+    function restoreGridState(state, options) {
+      var nextState = state || {};
+      var shouldRestoreScroll = !options || options.restoreScroll !== false;
+
+      activeType = nextState.activeType || "all";
+      activeQuery = nextState.activeQuery || "";
+      isolatedItemId = null;
+
+      if (searchInput) {
+        searchInput.value = activeQuery;
+      }
+
+      setActiveFilterButton(activeType);
+      applyState();
+
+      if (shouldRestoreScroll) {
+        restoreScroll(nextState.scrollY || 0);
+      }
+    }
+
+    function openItem(itemId, options) {
+      var item = getCardById(itemId);
+      if (!item) return;
+
+      isolatedItemId = itemId;
+      applyState();
+
+      if (options && options.pushHistory === false) return;
+
+      window.history.replaceState(buildHistoryState("grid"), "", setHash(null));
+      window.history.pushState(buildHistoryState("item"), "", setHash(itemId));
+      restoreScroll(item.offsetTop - 16);
+    }
+
+    filterBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        activeType = btn.dataset.type || "all";
+        isolatedItemId = null;
+        setActiveFilterButton(activeType);
+        applyState();
+        syncCurrentHistoryState();
       });
     });
-  });
 
-  applyFilters();
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        activeQuery = normalize(searchInput.value.trim());
+        isolatedItemId = null;
+        applyState();
+        syncCurrentHistoryState();
+      });
+    }
+
+    codeDetails.forEach(function (details) {
+      details.addEventListener("toggle", function () {
+        if (!details.open) return;
+
+        codeDetails.forEach(function (other) {
+          if (other !== details) {
+            other.open = false;
+          }
+        });
+      });
+    });
+
+    cards.forEach(function (card) {
+      card.addEventListener("click", function (event) {
+        if (isolatedItemId) return;
+        if (window.getSelection && window.getSelection().toString()) return;
+        if (event.target.closest("a, button, input, textarea, select, summary, details, pre, code")) {
+          return;
+        }
+
+        openItem(card.dataset.galleryId);
+      });
+    });
+
+    window.addEventListener("popstate", function (event) {
+      var state = event.state && event.state[galleryStateKey];
+      if (!state || state.gridId !== gridId) {
+        if (!parseHash()) {
+          restoreGridState({}, { restoreScroll: false });
+        }
+        return;
+      }
+
+      if (state.view === "item" && state.isolatedItemId) {
+        isolatedItemId = state.isolatedItemId;
+        activeType = state.activeType || "all";
+        activeQuery = state.activeQuery || "";
+        if (searchInput) {
+          searchInput.value = activeQuery;
+        }
+        setActiveFilterButton(activeType);
+        applyState();
+        restoreScroll(state.scrollY);
+        return;
+      }
+
+      restoreGridState(state);
+    });
+
+    setActiveFilterButton(activeType);
+
+    var initialItemId = parseHash();
+    if (initialItemId && getCardById(initialItemId)) {
+      activeType = "all";
+      activeQuery = "";
+      if (searchInput) {
+        searchInput.value = "";
+      }
+      setActiveFilterButton(activeType);
+      isolatedItemId = initialItemId;
+      applyState();
+      window.history.replaceState(buildHistoryState("item"), "", setHash(initialItemId));
+      return;
+    }
+
+    applyState();
+    window.history.replaceState(buildHistoryState("grid"), "", setHash(null));
+  }
+
+  grids.forEach(setupGallery);
 })();

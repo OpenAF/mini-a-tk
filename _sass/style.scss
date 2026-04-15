@@ -200,11 +200,48 @@
   gap: 0.6rem;
   transition: border-color 0.2s, box-shadow 0.2s;
   background: rgba(255, 255, 255, 0.5);
+  position: relative;
+  cursor: pointer;
 
   &:hover {
     border-color: #68d391;
     box-shadow: 0 4px 18px rgba(104, 211, 145, 0.12);
   }
+}
+
+.gallery-grid--isolated,
+.category-grid.gallery-grid--isolated {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.gallery-card--isolated {
+  cursor: default;
+}
+
+.gallery-card-close {
+  display: none;
+  align-self: flex-end;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2d3748;
+  background: rgba(160, 174, 192, 0.16);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(98, 187, 71, 0.18);
+    color: #256329;
+  }
+}
+
+.gallery-card--isolated .gallery-card-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .card-header {

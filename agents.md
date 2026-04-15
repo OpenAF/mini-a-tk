@@ -43,3 +43,5 @@ See the [mini-a agent file docs](https://mini-a.ai/agents) for the full frontmat
 </div>
 {%- endfor -%}
 </div>
+
+<script src="{{ '/assets/gallery.js' | relative_url }}" defer></script>

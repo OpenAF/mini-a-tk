@@ -46,3 +46,5 @@ mini-a extracommands=/path/to/team-commands
 </div>
 {%- endfor -%}
 </div>
+
+<script src="{{ '/assets/gallery.js' | relative_url }}" defer></script>
