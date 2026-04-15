@@ -45,7 +45,6 @@
 
   function setupGallery(grid, index) {
     var cards = Array.prototype.slice.call(grid.querySelectorAll(".gallery-card"));
-    var codeDetails = Array.prototype.slice.call(grid.querySelectorAll(".card-code-details"));
     var emptyMsg = document.getElementById("gallery-empty");
     var filterBtns = Array.prototype.slice.call(document.querySelectorAll(".filter-btn"));
     var searchInput = document.getElementById("gallery-search");
@@ -175,13 +174,13 @@
         var show = showIsolated
           ? card === isolatedCard
           : cardMatchesType(card) && cardMatchesQuery(card);
-        var details = card.querySelector(".card-code-details");
+        var codeBlock = card.querySelector(".card-code");
 
         card.style.display = show ? "" : "none";
         card.classList.toggle("gallery-card--isolated", showIsolated && card === isolatedCard);
 
-        if (details) {
-          details.open = showIsolated && card === isolatedCard;
+        if (codeBlock) {
+          codeBlock.style.display = showIsolated && card === isolatedCard ? "" : "none";
         }
 
         if (show) visible += 1;
@@ -244,18 +243,6 @@
         syncCurrentHistoryState();
       });
     }
-
-    codeDetails.forEach(function (details) {
-      details.addEventListener("toggle", function () {
-        if (!details.open) return;
-
-        codeDetails.forEach(function (other) {
-          if (other !== details) {
-            other.open = false;
-          }
-        });
-      });
-    });
 
     cards.forEach(function (card) {
       card.addEventListener("click", function (event) {

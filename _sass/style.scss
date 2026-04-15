@@ -218,11 +218,11 @@
   cursor: default;
 }
 
-.gallery-card .card-code-details {
+.gallery-card .card-code {
   display: none;
 }
 
-.gallery-card--isolated .card-code-details {
+.gallery-card--isolated .card-code {
   display: block;
 }
 
@@ -322,52 +322,21 @@
   opacity: 0.75;
 }
 
-// Card Code Details (collapsible)
-.card-code-details {
-  margin-top: 0.2rem;
+.card-code {
+  position: relative;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
 
-  summary {
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #4a5568;
-    user-select: none;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-
-    &::before {
-      content: "▶";
-      font-size: 0.7rem;
-      transition: transform 0.18s;
-    }
-
-    &::-webkit-details-marker {
-      display: none;
-    }
+  .highlighter-rouge,
+  pre.highlight {
+    margin: 0;
+    border-radius: 8px;
   }
 
-  &[open] > summary::before {
-    transform: rotate(90deg);
-  }
-
-  .card-code {
-    position: relative;
-    margin-top: 0.5rem;
+  pre {
     font-size: 0.82rem;
-
-    .highlighter-rouge,
-    pre.highlight {
-      margin: 0;
-      border-radius: 8px;
-    }
-
-    pre {
-      font-size: 0.82rem;
-      max-height: 320px;
-      overflow-y: auto;
-    }
+    max-height: 320px;
+    overflow-y: auto;
   }
 }
 

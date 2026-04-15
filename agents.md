@@ -31,12 +31,9 @@ See the [mini-a agent file docs](https://mini-a.ai/agents) for the full frontmat
     <span class="tag">{{ tag }}</span>
     {%- endfor -%}
   </div>
-  <details class="card-code-details">
-    <summary>View code</summary>
-    <div class="card-code">
+  <div class="card-code">
 {% highlight markdown %}{{ item.code }}{% endhighlight %}
-    </div>
-  </details>
+  </div>
   <div class="card-usage">
     <code>{{ item.usage }}</code>
   </div>

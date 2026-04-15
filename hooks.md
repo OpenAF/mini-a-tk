@@ -39,12 +39,9 @@ mini-a extrahooks=/path/to/team-hooks,/path/to/project-hooks
     <span class="tag">{{ tag }}</span>
     {%- endfor -%}
   </div>
-  <details class="card-code-details">
-    <summary>View code</summary>
-    <div class="card-code">
+  <div class="card-code">
 {% highlight yaml %}{{ item.code }}{% endhighlight %}
-    </div>
-  </details>
+  </div>
   <div class="card-usage">
     <strong>Event:</strong> <code>{{ item.event }}</code>
   </div>

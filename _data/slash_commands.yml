@@ -84,3 +84,50 @@
     3. Suggest the upgrade command.
 
     Output a markdown table with columns: Package | Current | Latest | CVEs.
+
+- name: gh-wf-update
+  title: "/gh-wf-update"
+  description: "Analyzes GitHub Actions workflows to identify outdated action versions and recommend updates. Focuses on security and stability best practices."
+  tags: [github, ci, devops, security]
+  usage: "/gh-wf-update"
+  code: |
+    ---
+    name: "GitHub Workflow Update Checker"
+    description: "Analyze GitHub Actions workflows in this repository to identify outdated action versions and recommend updates"
+    ---
+
+    ## Task
+    Scan all GitHub Actions workflow files in this repository (typically in `.github/workflows/`) and identify actions that are using outdated versions.
+
+    ## Steps
+
+    1. **Discover workflow files**: Find all YAML workflow files in `.github/workflows/` directory
+
+    2. **Extract action references**: For each workflow, identify all `uses:` statements that reference GitHub Actions (format: `owner/repo@version`)
+
+    3. **Analyze versions**: For each action:
+       - Determine if it uses a version tag (e.g., `\@v1`, `\@v2.1.0`) or a commit SHA
+       - Check if the version is a major version pin (recommended) or a specific minor/patch version
+       - Identify actions using `@main`, `@master`, or `@latest` (should be pinned to specific versions)
+
+    4. **Check for updates**: For each action, determine if a newer version exists:
+       - Compare current version against the latest available release
+       - Note any security advisories or deprecation notices
+
+    5. **Report findings**: Create a summary table with:
+       - Action name
+       - Current version
+       - Latest available version
+       - Update urgency (critical/security, recommended, optional)
+       - File(s) where used
+
+    ## Output Format
+
+    Present results in a markdown table sorted by update urgency, followed by specific update commands or PR suggestions.
+
+    ## Best Practices to Enforce
+
+    - ✅ Prefer major version tags (e.g., `@v4`) over full semver for stability
+    - ✅ Never use `@main`, `@master`, or branch names in production workflows
+    - ⚠️ Flag actions that haven't been updated in over 1 year
+    - 🔴 Highlight actions with known security vulnerabilities
