@@ -149,6 +149,7 @@ permalink: /
 
 <p id="gallery-empty" class="gallery-empty" style="display:none;">No items match your filter.</p>
 
+<script src="{{ '/assets/code-copy.js' | relative_url }}" defer></script>
 <script src="{{ '/assets/gallery.js' | relative_url }}" defer></script>
 
 ---

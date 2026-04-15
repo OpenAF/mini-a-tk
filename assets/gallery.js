@@ -180,7 +180,12 @@
         card.classList.toggle("gallery-card--isolated", showIsolated && card === isolatedCard);
 
         if (codeBlock) {
-          codeBlock.classList.toggle("card-code--visible", showIsolated && card === isolatedCard);
+          var isVisibleCode = showIsolated && card === isolatedCard;
+          codeBlock.classList.toggle("card-code--visible", isVisibleCode);
+
+          if (isVisibleCode && window.addCodeCopyButton) {
+            window.addCodeCopyButton(codeBlock);
+          }
         }
 
         if (show) visible += 1;
@@ -217,9 +222,6 @@
 
       isolatedItemId = itemId;
       applyState();
-      if (window.initCodeCopyButtons) {
-        window.initCodeCopyButtons();
-      }
 
       if (options && options.pushHistory === false) return;
 
@@ -296,9 +298,6 @@
       setActiveFilterButton(activeType);
       isolatedItemId = initialItemId;
       applyState();
-      if (window.initCodeCopyButtons) {
-        window.initCodeCopyButtons();
-      }
       window.history.replaceState(buildHistoryState("item"), "", setHash(initialItemId));
       return;
     }

@@ -43,4 +43,5 @@ mini-a extraskills=/path/to/shared-skills
 {%- endfor -%}
 </div>
 
+<script src="{{ '/assets/code-copy.js' | relative_url }}" defer></script>
 <script src="{{ '/assets/gallery.js' | relative_url }}" defer></script>

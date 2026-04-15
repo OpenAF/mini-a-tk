@@ -1,3 +1,4 @@
+# ------------
 - name: review
   title: "/review"
   description: "Trigger a code review on a file or directory. Passes the target path and any flags directly to the model."
@@ -12,6 +13,7 @@
     Categorize findings as critical, warning, or suggestion.
     Cite file and line numbers for every finding.
 
+# ------------
 - name: commit
   title: "/commit"
   description: "Generates a conventional commit message for the current staged changes. Optionally accepts a scope."
@@ -27,6 +29,7 @@
     Keep the subject line under 72 characters.
     Add a body paragraph if the change is non-trivial.
 
+# -------------
 - name: explain
   title: "/explain"
   description: "Explains a file, function, or code snippet in plain language. Great for onboarding or understanding unfamiliar code."
@@ -42,6 +45,7 @@
     3. Key algorithms or patterns used
     4. Any gotchas or non-obvious behaviour
 
+# ---------------
 - name: summarize
   title: "/summarize"
   description: "Summarizes the current conversation or a provided document. Useful for long sessions or handing off context."
@@ -56,6 +60,7 @@
     - Open questions or blockers
     - Next steps
 
+# ---------------
 - name: translate
   title: "/translate"
   description: "Translates code from one language or format to another (e.g., JS → TS, JSON → YAML, Python 2 → 3)."
@@ -69,6 +74,7 @@
     Preserve all semantics exactly. Add comments where the translation
     requires non-obvious choices or where idioms differ between formats.
 
+# ----------
 - name: deps
   title: "/deps"
   description: "Checks project dependencies for outdated versions and known vulnerabilities. Works with npm, pip, and Maven."
@@ -85,6 +91,7 @@
 
     Output a markdown table with columns: Package | Current | Latest | CVEs.
 
+# ------------------
 - name: gh-wf-update
   title: "/gh-wf-update"
   description: "Analyzes GitHub Actions workflows to identify outdated action versions and recommend updates. Focuses on security and stability best practices."
@@ -131,3 +138,17 @@
     - ✅ Never use `@main`, `@master`, or branch names in production workflows
     - ⚠️ Flag actions that haven't been updated in over 1 year
     - 🔴 Highlight actions with known security vulnerabilities
+
+# --------------------
+- name: git-delete-prs
+  title: "/git-delete-prs"
+  description: "Use the GitHub CLI to close PRs and delete branches. Passes PR numbers or branch names directly to the model."
+  tags: [git, github, cli, pr-management]
+  usage: "/git-delete-prs 123 124 feature-branch"
+  code: |
+    ---
+    name: Delete PRs
+    description: Use the GitHub CLI to close PRs and delete branches.
+    ---
+
+    using 'gh' close athe following PRs and delete the corresponding branches: {{args}}
