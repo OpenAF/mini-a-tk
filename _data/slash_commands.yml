@@ -166,3 +166,68 @@
     ---
 
     change the current folder git repo branch to origin '{{args}}'
+
+# -----------------------
+- name       : git-impact
+  title      : "/git-impact"
+  description: "Perform a git impact and risk analysis for the current repository. Assesses both local uncommitted changes and branch-level changes compared to the default branch."
+  tags       : [git, risk analysis, code review]
+  usage      : "/git-impact"
+  code       : |
+    ---
+    name: Git Impact and Risk Analysis
+    description: A structured approach to assess the impact and risk of changes in a git repository, both for local uncommitted changes and for branch-level changes compared to the default branch.
+    tags: [git, risk analysis, code review]
+    ---
+
+    Perform a git impact and risk analysis for the current repository. Follow these steps:
+
+    ## Step 1 — Gather git context
+
+    Run the following commands to collect data:
+    - `git rev-parse --abbrev-ref HEAD` — current branch name
+    - `git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'` — detect default remote branch (main or master), fallback to checking if `main` or `master` exists locally via `git branch --list main master`
+    - `git status --short` — uncommitted local changes (staged + unstaged)
+    - `git diff --stat HEAD` — stats for uncommitted changes vs last commit
+    - `git diff HEAD -- <each changed file>` — actual diffs for each changed file (limit to first 150 lines per file if too large)
+    - `git log --oneline $(git merge-base HEAD <default-branch>)..HEAD` — commits in current branch vs default branch
+    - `git diff --stat $(git merge-base HEAD <default-branch>)..HEAD` — stats for all branch changes vs default branch
+    - `git diff $(git merge-base HEAD <default-branch>)..HEAD -- <each changed file>` — full diffs for branch-level changes (limit to first 150 lines per file if too large)
+
+    ## Step 2 — Classify each changed file
+
+    For each file changed (both locally and in the branch), classify it:
+
+    | Category | Examples | Base Risk |
+    |---|---|---|
+    | **Core logic** | main entry points, business logic, algorithms | High |
+    | **Configuration** | yaml, json, env, package files | Medium-High |
+    | **API / interfaces** | exported functions, public API, contracts | High |
+    | **Tests** | test files, specs, fixtures | Low |
+    | **Documentation** | README, md, docs | Low |
+    | **Build / CI** | Makefile, Dockerfile, CI pipelines | Medium |
+    | **Dependencies** | package-lock, yarn.lock, go.sum | Medium-High |
+    | **Data / Schema** | migrations, schema files, data models | High |
+    | **Utilities / helpers** | shared utilities, common libs | Medium |
+
+    Increase risk if: many lines changed, file has no tests, file is imported/used widely, file is a shared dependency.
+
+    ## Step 3 — Present two impact reports
+
+    ### Report A: Local uncommitted changes
+
+    Present a table with columns: **File** | **+Lines** | **−Lines** | **Category** | **Risk** | **Impact summary**
+
+    Then write a short paragraph explaining the overall risk of committing the current local changes, highlighting the most dangerous files and why.
+
+    ### Report B: Full branch changes vs `<default-branch>`
+
+    Present the same table format for all files changed in the branch (relative to the merge-base with the default branch), grouped by risk level (High → Medium → Low).
+
+    Then write a paragraph with an overall branch-level risk assessment:
+    - What areas of the codebase are affected
+    - Which files are most likely to break existing functionality if merged
+    - Whether the change set looks safe to merge or needs extra review/testing
+    - Any missing tests or risky patterns spotted in the diffs
+
+    Use **bold** for high-risk items. Keep the tone factual and actionable.
