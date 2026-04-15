@@ -1,3 +1,4 @@
+# -----------------
 - name: shell-guard
   title: "Shell Guard"
   description: "Blocks destructive shell commands (rm -rf, mkfs, dd) before they are executed. Exits with code 1 to abort the tool call."
@@ -12,19 +13,7 @@
     timeout: 1500
     failBlocks: true
 
-- name: cost-tracker
-  title: "Cost Tracker"
-  description: "Logs estimated token cost after every tool call to a local CSV file. Useful for budgeting long-running sessions."
-  tags: [cost, monitoring, logging]
-  event: after_tool
-  code: |
-    event: after_tool
-    command: >
-      echo "$(date -Iseconds),$MINI_A_TOOL_NAME,$MINI_A_TOKENS_IN,$MINI_A_TOKENS_OUT" >>
-      ~/.openaf-mini-a/cost-log.csv
-    timeout: 2000
-    failBlocks: false
-
+# ---------------------
 - name: response-logger
   title: "Response Logger"
   description: "Appends every model response to a session log file. Useful for audit trails and post-session review."
@@ -35,10 +24,11 @@
     command: >
       mkdir -p ~/.openaf-mini-a/logs &&
       echo "--- $(date -Iseconds) ---" >> ~/.openaf-mini-a/logs/session.log &&
-      echo "$MINI_A_RESPONSE" >> ~/.openaf-mini-a/logs/session.log
+      echo "$MINI_A_RESULT" >> ~/.openaf-mini-a/logs/session.log
     timeout: 2000
     failBlocks: false
 
+# ---------------------
 - name: pre-goal-banner
   title: "Pre-Goal Banner"
   description: "Prints a formatted banner to the terminal before each goal starts. Helps visually separate runs in long sessions."
@@ -47,14 +37,15 @@
   code: |
     event: before_goal
     command: >
-      echo "" &&
-      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" &&
-      echo "  mini-a  ▸  $(date '+%H:%M:%S')" &&
-      echo "  Goal: $(echo "$MINI_A_GOAL" | head -c 80)" &&
-      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "" >> ~/.openaf-mini-a/logs/session.log &&
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >>  ~/.openaf-mini-a/logs/session.log &&
+      echo "  mini-a  ▸  $(date '+%H:%M:%S')" >> ~/.openaf-mini-a/logs/session.log &&
+      echo "  Goal: $(echo "$MINI_A_GOAL" | head -c 80)"  >> ~/.openaf-mini-a/logs/session.log &&
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"  >> ~/.openaf-mini-a/logs/session.log
     timeout: 1000
     failBlocks: false
 
+# ---------------------
 - name: tool-allow-list
   title: "Tool Allow-List"
   description: "Only allows a predefined set of MCP tool names to be called. All other tools are blocked before execution."
