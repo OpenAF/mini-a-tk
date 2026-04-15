@@ -28,7 +28,8 @@ mini-a extrahooks=/path/to/team-hooks,/path/to/project-hooks
 
 <div class="category-grid">
 {%- for item in site.data.hooks -%}
-<div class="gallery-card">
+{%- assign item_id = "hook-" | append: item.title | slugify -%}
+<div class="gallery-card" data-type="hook" data-title="{{ item.title }}" data-description="{{ item.description }}" data-tags="{{ item.tags | join: ' ' }}" data-gallery-id="{{ item_id }}">
   <div class="card-header">
     <span class="type-badge type-hook">hook</span>
     <h3 class="card-title">{{ item.title }}</h3>

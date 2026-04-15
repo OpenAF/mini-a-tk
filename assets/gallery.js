@@ -70,7 +70,7 @@
     cards = Array.prototype.slice.call(grid.querySelectorAll(".gallery-card"));
 
     cards.forEach(function (card, cardIndex) {
-      var baseId = slugify(
+      var baseId = card.dataset.galleryId || slugify(
         [
           card.dataset.type || "",
           card.dataset.name || "",

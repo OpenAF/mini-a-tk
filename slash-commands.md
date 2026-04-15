@@ -23,7 +23,8 @@ mini-a extracommands=/path/to/team-commands
 
 <div class="category-grid">
 {%- for item in site.data.slash_commands -%}
-<div class="gallery-card">
+{%- assign item_id = "slash-command-" | append: item.name | append: "-" | append: item.title | slugify -%}
+<div class="gallery-card" data-type="slash-command" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}" data-tags="{{ item.tags | join: ' ' }}" data-gallery-id="{{ item_id }}">
   <div class="card-header">
     <span class="type-badge type-slash-command">slash command</span>
     <h3 class="card-title">{{ item.title }}</h3>

@@ -22,7 +22,8 @@ mini-a extraskills=/path/to/shared-skills
 
 <div class="category-grid">
 {%- for item in site.data.skills -%}
-<div class="gallery-card">
+{%- assign item_id = "skill-" | append: item.name | append: "-" | append: item.title | slugify -%}
+<div class="gallery-card" data-type="skill" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}" data-tags="{{ item.tags | join: ' ' }}" data-gallery-id="{{ item_id }}">
   <div class="card-header">
     <span class="type-badge type-skill">skill</span>
     <h3 class="card-title">{{ item.title }}</h3>

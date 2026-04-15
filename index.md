@@ -95,7 +95,8 @@ failBlocks: true</code></pre><p>Common hook events:</p><ul><li><code>before_goal
 <div id="gallery-grid" class="gallery-grid">
 
   {%- for item in site.data.agents -%}
-  <div class="gallery-card" data-type="agent" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}">
+  {%- assign item_id = "agent-" | append: item.name | append: "-" | append: item.title | slugify -%}
+  <div class="gallery-card" data-type="agent" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}" data-gallery-id="{{ item_id }}">
     <div class="card-header">
       <span class="type-badge type-agent">agent</span>
       <h3 class="card-title">{{ item.title }}</h3>
@@ -116,7 +117,8 @@ failBlocks: true</code></pre><p>Common hook events:</p><ul><li><code>before_goal
   {%- endfor -%}
 
   {%- for item in site.data.slash_commands -%}
-  <div class="gallery-card" data-type="slash-command" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}">
+  {%- assign item_id = "slash-command-" | append: item.name | append: "-" | append: item.title | slugify -%}
+  <div class="gallery-card" data-type="slash-command" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}" data-gallery-id="{{ item_id }}">
     <div class="card-header">
       <span class="type-badge type-slash-command">slash command</span>
       <h3 class="card-title">{{ item.title }}</h3>
@@ -137,7 +139,8 @@ failBlocks: true</code></pre><p>Common hook events:</p><ul><li><code>before_goal
   {%- endfor -%}
 
   {%- for item in site.data.hooks -%}
-  <div class="gallery-card" data-type="hook" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}">
+  {%- assign item_id = "hook-" | append: item.title | slugify -%}
+  <div class="gallery-card" data-type="hook" data-tags="{{ item.tags | join: ' ' }}" data-title="{{ item.title }}" data-description="{{ item.description }}" data-gallery-id="{{ item_id }}">
     <div class="card-header">
       <span class="type-badge type-hook">hook</span>
       <h3 class="card-title">{{ item.title }}</h3>
@@ -158,7 +161,8 @@ failBlocks: true</code></pre><p>Common hook events:</p><ul><li><code>before_goal
   {%- endfor -%}
 
   {%- for item in site.data.skills -%}
-  <div class="gallery-card" data-type="skill" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}">
+  {%- assign item_id = "skill-" | append: item.name | append: "-" | append: item.title | slugify -%}
+  <div class="gallery-card" data-type="skill" data-tags="{{ item.tags | join: ' ' }}" data-name="{{ item.name }}" data-title="{{ item.title }}" data-description="{{ item.description }}" data-gallery-id="{{ item_id }}">
     <div class="card-header">
       <span class="type-badge type-skill">skill</span>
       <h3 class="card-title">{{ item.title }}</h3>
