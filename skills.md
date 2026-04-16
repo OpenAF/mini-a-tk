@@ -14,11 +14,36 @@ Skills are prompt templates that extend mini-a's behaviour. They live in `~/.ope
 mini-a extraskills=/path/to/shared-skills
 ```
 
-**Skill layouts:**
-- `~/.openaf-mini-a/skills/<name>/SKILL.md`
-- `~/.openaf-mini-a/skills/<name>.md`
+**Skill formats** (precedence order — first match wins):
 
-You can also drop downloaded skill packs in `~/.openaf-mini-a/skills/` as folders as long as each one contains `SKILL.md` (or `skill.md`). Inside folder skills, relative `@file.md` attachments resolve against the skill folder, and relative markdown links to `.md` files are inlined as extra reference content.
+| Format | Path | Notes |
+|--------|------|-------|
+| `SKILL.yaml` | `~/.openaf-mini-a/skills/<name>/SKILL.yaml` | Self-contained: body + refs bundled in one file |
+| `SKILL.yml` | `~/.openaf-mini-a/skills/<name>/SKILL.yml` | Same as YAML |
+| `SKILL.json` | `~/.openaf-mini-a/skills/<name>/SKILL.json` | JSON equivalent |
+| `SKILL.md` | `~/.openaf-mini-a/skills/<name>/SKILL.md` | Classic folder skill |
+| `skill.md` | `~/.openaf-mini-a/skills/<name>/skill.md` | Lowercase alias |
+| `<name>.md` | `~/.openaf-mini-a/skills/<name>.md` | Single-file skill |
+
+**YAML skills** bundle the prompt body and all `@`-referenced files into a single portable file — no supporting folder required. Print a starter template with `mini-a --skills`.
+
+```yaml
+schema: mini-a.skill/v1
+name: my-skill
+summary: Short description shown by /skills
+
+body: |
+  You are a specialized assistant for {{arg1}}.
+  @context.md
+
+refs:
+  context.md: |
+    Add context here.
+```
+
+**Placeholders** work in all formats: `{{args}}` · `{{argv}}` · `{{argc}}` · `{{arg1}}`, `{{arg2}}`, …
+
+Inside folder skills, relative `@file.md` attachments resolve against the skill folder. In YAML skills, `@`-references resolve from the embedded `refs` map first, then fall back to the filesystem.
 
 ---
 

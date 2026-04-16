@@ -105,3 +105,35 @@
        N+1 subquery patterns, non-sargable predicates).
     3. Suggest an optimised version with comments explaining each change.
     4. List the indexes that would most improve this query's performance.
+
+- name: release-notes
+  title: "Release Notes Generator (YAML format)"
+  description: "Drafts release notes from commits and a changelog. Demonstrates the self-contained SKILL.yaml format with embedded refs and placeholders."
+  tags: [docs, changelog, yaml-format]
+  usage: "/release-notes v2.4.0"
+  code: |
+    schema: mini-a.skill/v1
+    name: release-notes
+    summary: Draft release notes from commits and changelog context
+
+    body: |
+      Produce release notes for version {{arg1}}.
+
+      Use the voice defined in @voice.md and the template in @template.md.
+
+      Commits to summarise:
+      {{args}}
+
+    meta:
+      tags: [docs, changelog]
+
+    refs:
+      voice.md: |
+        Keep language concise and user-focused.
+        Avoid internal jargon.
+      template.md: |
+        ## Highlights
+        - …
+
+        ## Bug Fixes
+        - …
