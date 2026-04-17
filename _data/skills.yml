@@ -137,3 +137,360 @@
 
         ## Bug Fixes
         - …
+
+- name: security-audit
+  title: "Security Audit"
+  description: "Comprehensive security audit covering OWASP Top-10, hardcoded secrets, and dependency risks. Uses the YAML skill format with embedded check refs and a children sub-folder for per-domain rules."
+  tags: [security, audit, owasp, secrets, dependencies, yaml-format]
+  usage: "/security-audit src/"
+  code: |
+    schema: mini-a.skill/v1
+    name: security-audit
+    summary: Comprehensive security audit covering OWASP Top-10, secrets, and dependency risks
+
+    body: |
+      Target: {{arg1}}
+
+      Perform a comprehensive security audit of {{arg1}}.
+
+      Work through each section defined in the reference files below:
+
+      @owasp.md
+      @secrets.md
+      @deps.md
+
+      For each finding report:
+      - **File** and **line number** (when applicable)
+      - **Severity**: Critical / High / Medium / Low / Info
+      - **Category**: e.g. Injection, Hardcoded Secret, Outdated Dep
+      - **Description**: what the issue is and why it matters
+      - **Remediation**: specific fix or mitigation
+
+      Finish with a one-paragraph executive summary of overall risk.
+
+    meta:
+      tags: [security, audit, owasp]
+
+    refs:
+      owasp.md: |
+        ## OWASP Top-10 checks
+        - A01 Broken Access Control: missing auth checks, IDOR, path traversal
+        - A02 Cryptographic Failures: weak ciphers, missing TLS, unencrypted PII at rest
+        - A03 Injection: SQL, command, LDAP, XSS, template injection
+        - A04 Insecure Design: missing rate limiting, absent threat modelling artefacts
+        - A05 Security Misconfiguration: debug flags, default creds, overly broad CORS
+        - A06 Vulnerable Components: outdated libraries with known CVEs
+        - A07 Auth Failures: weak passwords, missing MFA, broken session handling
+        - A08 Integrity Failures: unsigned packages, untrusted deserialization
+        - A09 Logging Failures: no audit trail, sensitive data in logs
+        - A10 SSRF: user-supplied URLs fetched without validation
+      secrets.md: |
+        ## Secrets and credential checks
+        Scan all files for:
+        - Hard-coded API keys, tokens, passwords, or private keys
+        - Patterns: `password =`, `secret =`, `api_key =`, `-----BEGIN`, base64 blobs > 40 chars
+        - .env files committed to the repository
+        - Credentials embedded in connection strings or config files
+        - Tokens appearing in log output or error messages
+      deps.md: |
+        ## Dependency risk checks
+        - Parse dependency manifests (package.json, requirements.txt, go.mod, pom.xml, Gemfile)
+        - Flag packages with known CVEs or suspicious naming (typosquatting)
+        - Identify dependencies pinned to mutable references (branches, `latest`)
+        - Note transitive dependencies that dominate the vulnerability surface
+
+- name: docker-audit
+  title: "Docker Audit"
+  description: "Audits Dockerfiles and docker-compose files for security issues and layer inefficiencies. Uses the YAML skill format with separate refs for security rules, layer hygiene, and compose-specific checks."
+  tags: [docker, containers, security, devops, yaml-format]
+  usage: "/docker-audit ."
+  code: |
+    schema: mini-a.skill/v1
+    name: docker-audit
+    summary: Audit Dockerfiles and docker-compose files for security and layer efficiency
+
+    body: |
+      Target: {{arg1}}
+
+      Audit the Docker artefacts at {{arg1}} (or the current directory if omitted).
+
+      If available, run `docker inspect` and `docker history` on built images to enrich the analysis.
+
+      Apply the checks from each section below:
+
+      @security.md
+      @layer-hygiene.md
+      @compose-rules.md
+
+      For each finding report:
+      - **File** and **line** (or image layer index)
+      - **Severity**: Critical / High / Medium / Low
+      - **Rule** violated
+      - **Remediation**: corrected snippet or recommended fix
+
+      End with a prioritised action list ordered by severity.
+
+    meta:
+      tags: [docker, security, devops]
+
+    refs:
+      security.md: |
+        ## Dockerfile security checks
+        - Base image: prefer official minimal images (alpine, distroless); flag `latest` tags
+        - Running as root: flag missing `USER` instruction; verify non-root UID is set
+        - Secrets at build time: flag `ARG` or `ENV` carrying passwords/tokens; recommend BuildKit secrets
+        - `ADD` vs `COPY`: flag `ADD` with remote URLs (prefer `COPY` + explicit download step)
+        - Package managers: flag `apt-get` without `--no-install-recommends` and without cache cleanup in the same layer
+        - Exposed ports: flag unnecessarily broad `EXPOSE` directives
+        - `HEALTHCHECK`: flag images with no `HEALTHCHECK` instruction
+        - Read-only filesystem: note if the image can run with `--read-only` at runtime
+      layer-hygiene.md: |
+        ## Layer efficiency checks
+        - Combine related `RUN` commands with `&&` to minimise layer count
+        - Flag cache-busting: `COPY . .` placed before dependency install steps
+        - Order instructions least-to-most volatile (deps before source code)
+        - Flag large layers: build tools, dev dependencies, or test fixtures left in the final image
+        - Multi-stage builds: flag single-stage builds that include compilers or build tools in the final image
+        - `.dockerignore`: warn if missing or lacking key entries (`.git`, `node_modules`, `*.log`)
+      compose-rules.md: |
+        ## docker-compose checks
+        - Secrets: flag plain-text passwords in `environment:` blocks; recommend Docker secrets or env files
+        - Volumes: flag bind-mounts to sensitive host paths (`/etc`, `/var/run/docker.sock`)
+        - Network isolation: flag services on `host` network mode without justification
+        - Resource limits: flag services missing `mem_limit` / `cpus` constraints
+        - Restart policy: flag `restart: always` on services that should not auto-restart on failure
+        - Image versions: flag services using `:latest` or no tag at all
+        - Healthchecks: flag services with no `healthcheck:` and no `depends_on:` condition
+
+- name: test-generator
+  title: "Test Generator"
+  description: "Generates a complete, runnable unit test file for a target source file. Auto-detects the framework (Jest, pytest, Go testing, OpenAF ow.test) and applies the matching template from embedded refs."
+  tags: [testing, jest, pytest, go, openaf, quality, yaml-format]
+  usage: "/test-generator src/utils/parser.js"
+  code: |
+    schema: mini-a.skill/v1
+    name: test-generator
+    summary: Generate unit tests for a target file, detecting the framework automatically
+
+    body: |
+      Target: {{arg1}}
+
+      Inspect {{arg1}} and generate a complete, runnable unit test file for it.
+
+      ## Step 1 — Detect the language and test framework
+
+      Read the file extension and content, then check for framework config files:
+      - `jest.config.*` or `"jest"` in package.json → use @jest.md
+      - `pytest.ini`, `pyproject.toml`, or `setup.cfg` with `[tool:pytest]` → use @pytest.md
+      - `go.mod` present → use @go-test.md
+      - `autoTestAll.allJobs.yaml` present or `ow.load*` calls in source → use @openaf.md
+
+      If multiple signals conflict, prefer the one with the most config-file evidence.
+
+      ## Step 2 — Identify what to test
+
+      - List all exported/public functions, methods, or classes
+      - For each: identify inputs, outputs, side effects, and error paths
+      - Prioritise: happy path, null/empty inputs, boundary values, error conditions
+
+      ## Step 3 — Generate the test file
+
+      Follow the template for the detected framework exactly.
+      Cover at minimum: one happy-path test, one null/empty-input test, one error/exception test.
+
+      @jest.md
+      @pytest.md
+      @go-test.md
+      @openaf.md
+
+      ## Step 4 — Output
+
+      Print the complete test file, ready to save and run.
+      State the suggested save path.
+      List any setup steps needed (install deps, seed data, required env vars).
+
+    meta:
+      tags: [testing, quality]
+
+    refs:
+      jest.md: |
+        ## Jest (JavaScript / TypeScript)
+        Use when: `.js`, `.ts`, `.jsx`, or `.tsx` file with `package.json` present.
+
+        ```javascript
+        import { myFunc } from '../src/myModule';
+
+        describe('myFunc', () => {
+          it('returns expected output for valid input', () => {
+            expect(myFunc('hello')).toBe('HELLO');
+          });
+
+          it('throws on null input', () => {
+            expect(() => myFunc(null)).toThrow();
+          });
+
+          it('handles empty string', () => {
+            expect(myFunc('')).toBe('');
+          });
+        });
+        ```
+
+        Rules:
+        - One `describe` block per module; one `it` per behaviour
+        - Use `jest.fn()` for mocks; `beforeEach`/`afterEach` for setup/teardown
+        - Test observable behaviour, not implementation details
+        - Suggested path: `<dir>/__tests__/<name>.test.ts` or `<name>.spec.ts`
+
+      pytest.md: |
+        ## pytest (Python)
+        Use when: `.py` files present.
+
+        ```python
+        import pytest
+        from mymodule import my_func
+
+        def test_my_func_basic():
+            assert my_func("hello") == "HELLO"
+
+        def test_my_func_none_raises():
+            with pytest.raises(TypeError):
+                my_func(None)
+
+        def test_my_func_empty():
+            assert my_func("") == ""
+
+        @pytest.fixture
+        def sample_data():
+            return {"key": "value"}
+
+        def test_my_func_with_fixture(sample_data):
+            assert my_func(sample_data["key"]) == "VALUE"
+        ```
+
+        Rules:
+        - One test file per module; prefix all test functions with `test_`
+        - Use `@pytest.fixture` for shared setup; `tmp_path` for temporary files
+        - Use `pytest.raises` for exception assertions
+        - Suggested path: `tests/test_<module>.py`
+
+      go-test.md: |
+        ## Go testing (standard library)
+        Use when: `.go` files and `go.mod` present.
+
+        ```go
+        package mypackage_test
+
+        import (
+            "testing"
+            "github.com/user/repo/mypackage"
+        )
+
+        func TestMyFuncBasic(t *testing.T) {
+            got  := mypackage.MyFunc("hello")
+            want := "HELLO"
+            if got != want {
+                t.Errorf("MyFunc(%q) = %q, want %q", "hello", got, want)
+            }
+        }
+
+        func TestMyFunc_TableDriven(t *testing.T) {
+            tests := []struct {
+                name  string
+                input string
+                want  string
+            }{
+                {"basic",     "hello", "HELLO"},
+                {"empty",     "",      ""},
+            }
+            for _, tt := range tests {
+                t.Run(tt.name, func(t *testing.T) {
+                    if got := mypackage.MyFunc(tt.input); got != tt.want {
+                        t.Errorf("got %q, want %q", got, tt.want)
+                    }
+                })
+            }
+        }
+        ```
+
+        Rules:
+        - Use external test package (`package foo_test`) to test the public API
+        - Prefer table-driven tests for multiple input/output cases
+        - Use `t.Helper()` in shared assertion helpers
+        - Suggested path: `<name>_test.go` alongside the source file
+
+      openaf.md: |
+        ## OpenAF (ow.test framework)
+        Use when: `.js` files in an OpenAF project — `autoTestAll.allJobs.yaml` present or `ow.load*` calls in source.
+
+        ### JS test file — `autoTestAll.<Area>.js`
+        ```javascript
+        // Tests for <module description>
+
+        (function() {
+
+            exports.testMyFuncBasic = function() {
+                ow.loadFormat(); // load the OpenAF module under test
+
+                var result = myModule.myFunc("hello");
+                ow.test.assert(result, "HELLO", "myFunc should uppercase the input");
+            };
+
+            exports.testMyFuncNull = function() {
+                var result = myModule.myFunc(null);
+                ow.test.assert(result, null, "myFunc should return null for null input");
+            };
+
+            exports.testMyFuncWithCleanup = function() {
+                var tmpFile = "autoTestAll.myFunc.tmp";
+                try {
+                    myModule.myFuncWriteFile(tmpFile, "data");
+                    ow.test.assert(io.fileExists(tmpFile), true, "Output file should exist");
+                } finally {
+                    io.rm(tmpFile);
+                }
+            };
+
+        })();
+        ```
+
+        ### Orchestrator YAML — `autoTestAll.<Area>.yaml`
+        ```yaml
+        include:
+           - oJobTest.yaml
+
+        jobs:
+           - name: <Area>::Init
+             exec: |
+               args.tests = require("autoTestAll.<Area>.js");
+
+           - name: <Area>::Basic
+             from: <Area>::Init
+             to  : oJob Test
+             exec: args.func = args.tests.testMyFuncBasic;
+
+           - name: <Area>::Null input
+             from: <Area>::Init
+             to  : oJob Test
+             exec: args.func = args.tests.testMyFuncNull;
+
+           - name: <Area>::Cleanup
+             from: <Area>::Init
+             to  : oJob Test
+             exec: args.func = args.tests.testMyFuncWithCleanup;
+
+        todo:
+           - <Area>::Init
+           - <Area>::Basic
+           - <Area>::Null input
+           - <Area>::Cleanup
+        ```
+
+        Rules:
+        - Wrap all code in `(function() { ... })()` — no global variable leaks
+        - Export names must start with `test` (CamelCase after the prefix)
+        - Do NOT call `ow.loadTest()` — the framework loads it once before your tests run
+        - Load OpenAF modules (`ow.loadFormat()`, `ow.loadObj()`) inside each test function
+        - Clean up temporary files in a `try/finally` block using `io.rm()`
+        - Register the new YAML in `autoTestAll.allJobs.yaml`
+        - Run one area: `ojob autoTestAll.<Area>.yaml`
+        - Run full suite: `ojob autoTestAll.yaml`
