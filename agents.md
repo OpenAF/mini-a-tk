@@ -18,6 +18,8 @@ The `mini-a:` frontmatter section can override defaults that were not explicitly
 
 See the [mini-a agent file docs](https://mini-a.ai/agents) for the full frontmatter reference.
 
+The gallery below also includes the shipped starters from `examples/*.agent.md` in the main mini-a repository, so the toolkit stays aligned with the built-in templates.
+
 ---
 
 <div class="category-grid">

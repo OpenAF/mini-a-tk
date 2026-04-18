@@ -4,7 +4,7 @@ title: Hooks
 permalink: /hooks/
 ---
 
-Hooks run shell commands automatically before or after agent events. Place YAML hook files in `~/.openaf-mini-a/hooks/`.
+Hooks run shell commands automatically before or after agent events. Place YAML hook files in `~/.openaf-mini-a/hooks/`. Rename a file to `.yaml.disabled` or `.yml.disabled` when you want to keep it around without loading it.
 
 **Supported events:** `before_goal` · `after_goal` · `before_tool` · `after_tool` · `before_shell` · `after_shell`
 

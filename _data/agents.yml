@@ -228,3 +228,178 @@
     ---
 
     Extract durable lessons and reusable patterns from the conversation history provided.
+
+- name: agent-template
+  title: "Agent Template Starter"
+  description: "Shipped `.agent.md` starter aligned with `agent-template.yaml`. A minimal baseline profile for custom agents."
+  tags: [starter, template, shipped]
+  usage: "mini-a agent=examples/agent-template.agent.md"
+  code: |
+    ---
+    name: agent-template
+    description: Agent profile starter aligned with agent-template.yaml
+    model: "(type: openai, model: gpt-5-mini, key: '...')"
+    capabilities:
+      - useutils
+      - usetools
+      # - useshell
+      # - readwrite
+    mini-a:
+      useplanning: true
+      usestream: false
+    tools:
+      - type: ojob
+        options:
+          job: mcps/mcp-time.yaml
+    constraints:
+      - Prefer tool-grounded outputs.
+      - Keep responses deterministic and concise.
+    knowledge: |
+      Starter context for agent-template.
+    youare: |
+      You are a specialized AI agent for agent-template workflows.
+    ---
+    
+    # Notes
+    - Tune capabilities and tools for your scenario.
+    - Run with: mini-a agent=examples/agent-template.agent.md goal="..."
+
+- name: agent-template-v2
+  title: "Agent Template V2 Starter"
+  description: "Shipped `.agent.md` starter aligned with `agent-template-v2.yaml`. Useful when you want a current starter profile to customize."
+  tags: [starter, template, shipped]
+  usage: "mini-a agent=examples/agent-template-v2.agent.md"
+  code: |
+    ---
+    name: agent-template-v2
+    description: Agent profile starter aligned with agent-template-v2.yaml
+    model: "(type: openai, model: gpt-5-mini, key: '...')"
+    capabilities:
+      - useutils
+      - usetools
+      # - useshell
+      # - readwrite
+    mini-a:
+      useplanning: true
+      usestream: false
+    tools:
+      - type: ojob
+        options:
+          job: mcps/mcp-time.yaml
+    constraints:
+      - Prefer tool-grounded outputs.
+      - Keep responses deterministic and concise.
+    knowledge: |
+      Starter context for agent-template-v2.
+    youare: |
+      You are a specialized AI agent for agent-template-v2 workflows.
+    ---
+    
+    # Notes
+    - Tune capabilities and tools for your scenario.
+    - Run with: mini-a agent=examples/agent-template-v2.agent.md goal="..."
+
+- name: changelog-gen
+  title: "Changelog Generator Starter"
+  description: "Shipped `.agent.md` starter aligned with `changelog-gen.yaml`. Good starting point for changelog and release-note workflows."
+  tags: [starter, changelog, docs, shipped]
+  usage: "mini-a agent=examples/changelog-gen.agent.md"
+  code: |
+    ---
+    name: changelog-gen
+    description: Agent profile starter aligned with changelog-gen.yaml
+    model: "(type: openai, model: gpt-5-mini, key: '...')"
+    capabilities:
+      - useutils
+      - usetools
+      # - useshell
+      # - readwrite
+    mini-a:
+      useplanning: true
+      usestream: false
+    tools:
+      - type: ojob
+        options:
+          job: mcps/mcp-time.yaml
+    constraints:
+      - Prefer tool-grounded outputs.
+      - Keep responses deterministic and concise.
+    knowledge: |
+      Starter context for changelog-gen.
+    youare: |
+      You are a specialized AI agent for changelog-gen workflows.
+    ---
+    
+    # Notes
+    - Tune capabilities and tools for your scenario.
+    - Run with: mini-a agent=examples/changelog-gen.agent.md goal="..."
+
+- name: document
+  title: "Documentation Updater Starter"
+  description: "Shipped `.agent.md` starter aligned with `document.yaml`. Useful as a base profile for documentation maintenance workflows."
+  tags: [starter, docs, shipped]
+  usage: "mini-a agent=examples/document.agent.md"
+  code: |
+    ---
+    name: document
+    description: Agent profile starter aligned with document.yaml
+    model: "(type: openai, model: gpt-5-mini, key: '...')"
+    capabilities:
+      - useutils
+      - usetools
+      # - useshell
+      # - readwrite
+    mini-a:
+      useplanning: true
+      usestream: false
+    tools:
+      - type: ojob
+        options:
+          job: mcps/mcp-time.yaml
+    constraints:
+      - Prefer tool-grounded outputs.
+      - Keep responses deterministic and concise.
+    knowledge: |
+      Starter context for document.
+    youare: |
+      You are a specialized AI agent for document workflows.
+    ---
+    
+    # Notes
+    - Tune capabilities and tools for your scenario.
+    - Run with: mini-a agent=examples/document.agent.md goal="..."
+
+- name: email-report
+  title: "Email Report Starter"
+  description: "Shipped `.agent.md` starter aligned with `email-report.yaml`. Useful as a base profile for generating and sending recurring reports."
+  tags: [starter, email, reporting, shipped]
+  usage: "mini-a agent=examples/email-report.agent.md"
+  code: |
+    ---
+    name: email-report
+    description: Agent profile starter aligned with email-report.yaml
+    model: "(type: openai, model: gpt-5-mini, key: '...')"
+    capabilities:
+      - useutils
+      - usetools
+      # - useshell
+      # - readwrite
+    mini-a:
+      useplanning: true
+      usestream: false
+    tools:
+      - type: ojob
+        options:
+          job: mcps/mcp-time.yaml
+    constraints:
+      - Prefer tool-grounded outputs.
+      - Keep responses deterministic and concise.
+    knowledge: |
+      Starter context for email-report.
+    youare: |
+      You are a specialized AI agent for email-report workflows.
+    ---
+    
+    # Notes
+    - Tune capabilities and tools for your scenario.
+    - Run with: mini-a agent=examples/email-report.agent.md goal="..."

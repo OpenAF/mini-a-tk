@@ -45,6 +45,8 @@ refs:
 
 Inside folder skills, relative `@file.md` attachments resolve against the skill folder. In YAML skills, `@`-references resolve from the embedded `refs` map first, then fall back to the filesystem.
 
+Folders ending in `.disabled` are ignored during discovery, which lets you keep a skill installed without exposing it in `/skills`.
+
 ---
 
 <div class="category-grid">
