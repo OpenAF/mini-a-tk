@@ -495,6 +495,764 @@
         - Run one area: `ojob autoTestAll.<Area>.yaml`
         - Run full suite: `ojob autoTestAll.yaml`
 
+- name: build-ojob
+  title: "oJob Builder"
+  description: "Generates a complete, runnable OpenAF oJob YAML file from a free-form description. Covers basic JS jobs, shell jobs, built-in shortcuts, multi-file includes, oJob-common modules, and validation patterns."
+  tags: [openaf, ojob, yaml, automation, yaml-format]
+  usage: "/build-ojob a periodic job that checks an S3 bucket and logs any new files"
+  code: |
+    schema: mini-a.skill/v1
+    name: build-ojob
+    summary: Generate a complete OpenAF oJob YAML file from a free-form description
+
+    body: |
+      Build an OpenAF oJob YAML file for the following:
+
+      {{args}}
+
+      ## Step 1 — Analyse the request
+
+      Identify:
+      - What each job does and what language it needs (default JS, shell, python, etc.)
+      - Whether jobs run sequentially or can run in parallel / fan-out
+      - Which args the user must supply (mandatory) vs. can omit (optional with defaults)
+      - Whether the task needs conditional branching, looping, or parallel collection processing
+      - Whether any external includes, remote ojob.io jobs, or oJob-common modules are a natural fit
+
+      ## Step 2 — Select building blocks
+
+      Always consult @basics.md for the core structure.
+      Then consult whichever additional refs apply:
+
+      - @validation.md — any job that accepts typed inputs or produces typed outputs
+      - @shell.md — any job that runs shell/bash commands
+      - @shortcuts.md — conditional branching, parallel execution, or inline todo operations
+      - @includes.md — when the oJob uses other files, oPacks, or remote ojob.io jobs
+      - @common.md — when oJob-common modules (testing, SQL, HTTP, file I/O) are a natural fit
+
+      ## Step 3 — Design the job graph
+
+      Before writing YAML, reason through:
+      - Job names — use Namespace::JobName for multi-file oJobs, plain names for single-file ones
+      - Execution order in todo
+      - Arg flow: which job sets which key, which job reads it
+      - from/to vs deps — use from/to for before/after wrappers; deps for strict prerequisites
+      - Where each(data) fan-out applies for parallel collection processing
+
+      ## Step 4 — Write the oJob YAML
+
+      Produce a complete, runnable file:
+      - help section: text plus an expects entry for every user-facing argument
+      - init section: sensible defaults for optional args (available as args.init.* in all jobs)
+      - ojob section: opacks list, logToConsole, catch handler, any owraps/loadLibs
+      - jobs array: all job definitions with exec, check, catch, typeArgs as needed
+      - todo array: correct execution order with shortcut entries where appropriate
+
+      ## Step 5 — Output
+
+      Print the complete YAML file, ready to save and run.
+      State the suggested filename (e.g. checkS3.yaml).
+      List any oPacks or system tools required.
+      Show the exact run command: ojob myFile.yaml arg1=value1 arg2=value2
+
+    meta:
+      tags: [openaf, ojob, yaml, automation]
+
+    refs:
+      basics.md: |
+        ## oJob basics — structure and JavaScript jobs
+
+        ### Minimal skeleton
+
+        ```yaml
+        help:
+          text   : What this oJob does.
+          expects:
+          - name     : inputFile
+            desc     : Path to the input file
+            mandatory: true
+            example  : data.json
+          - name     : verbose
+            desc     : Enable verbose output
+            mandatory: false
+            example  : "true"
+
+        init:
+          outputDir: /tmp/results   # available as args.init.outputDir in all jobs
+
+        ojob:
+          opacks      :
+          - openaf: ">=20230601"
+          logToConsole: true
+          catch       : logErr("[" + job.name + "] " + exception)
+
+        jobs:
+        - name: My Job
+          exec: | #js
+            log("Running: " + job.name)
+            var data = io.readFileJSON(args.inputFile)
+            args.result = data.items.length
+
+        todo:
+        - My Job
+        ```
+
+        ### Job with default args using ${key:-default} syntax
+
+        ```yaml
+        jobs:
+        - name: Connect
+          args:
+            host: "${dbHost:-localhost}"
+            port: "${dbPort:-5432}"
+          exec: | #js
+            log("Connecting to " + args.host + ":" + args.port)
+        ```
+
+        ### Sequential multi-job pipeline
+
+        ```yaml
+        jobs:
+        - name: Load
+          exec: | #js
+            args.data = io.readFileJSON(args.inputFile)
+
+        - name: Transform
+          exec: | #js
+            args.data = args.data.map(r => merge(r, { processed: true }))
+
+        - name: Save
+          exec: | #js
+            io.writeFileJSON(args.outputFile, args.data, "")
+
+        todo:
+        - Load
+        - Transform
+        - Save
+        ```
+
+        ### from / to — before/after wrappers
+
+        `from` runs prerequisite jobs before exec; the main job inherits their args output.
+        `to` runs follow-up jobs after exec.
+
+        ```yaml
+        jobs:
+        - name: Connect DB
+          exec: | #js
+            global.db = new DB(args.url, args.user, args.pass)
+
+        - name: Disconnect DB
+          exec: | #js
+            if (global.db) global.db.close()
+
+        - name: Query
+          from: Connect DB
+          to  : Disconnect DB
+          exec: | #js
+            args.rows = global.db.q("SELECT * FROM items").results
+        ```
+
+        ### Parallel fan-out with each
+
+        ```yaml
+        jobs:
+        - name: Process All Files
+          each:
+          - Process One File
+          exec: | #js
+            io.listFiles(".").files.forEach(f => each(f))
+
+        - name: Process One File
+          exec: | #js
+            log("Processing " + args.canonicalPath)
+        ```
+
+        ### Error handling
+
+        ```yaml
+        jobs:
+        - name: Risky Job
+          catch: | #js
+            logErr("Failed: " + exception)
+            return true   # true = handled; false/omit = propagate
+          exec : | #js
+            // your code here
+        ```
+
+        ### Periodic (scheduled) job
+
+        ```yaml
+        ojob:
+          daemon: true
+
+        jobs:
+        - name : Heartbeat
+          type : periodic
+          typeArgs:
+            cron         : "0 */5 * * * *"   # every 5 minutes
+            waitForFinish: true
+          exec : | #js
+            log("tick " + new Date())
+
+        todo:
+        - Heartbeat
+        ```
+
+        ### Shutdown job
+
+        ```yaml
+        jobs:
+        - name: Cleanup
+          type: shutdown
+          exec: | #js
+            log("shutting down — releasing resources")
+        ```
+
+        ### deps — strict prerequisites
+
+        ```yaml
+        jobs:
+        - name: Main Job
+          deps:
+          - Setup Job
+          - name     : Config Job
+            onSuccess: | #js
+              log("config loaded")
+            onFail   : | #js
+              logErr("config failed")
+              return false   # stop execution
+          exec: | #js
+            log("dependencies satisfied")
+        ```
+
+      validation.md: |
+        ## oJob validation — check.in and check.out
+
+        The `check` section validates and coerces args before (`in`) and after (`out`) exec.
+        Failures throw before the job body runs, so exec can assume clean types.
+
+        ### Common validator chains
+
+        | Chain | Meaning |
+        |-------|---------|
+        | `isString` | Must be a string |
+        | `isNumber` | Must be a number |
+        | `isBoolean` | Must be a boolean |
+        | `isMap` | Must be an object/map |
+        | `isArray` | Must be an array |
+        | `toNumber.isNumber` | Coerce from string then validate |
+        | `toBoolean.isBoolean` | Coerce from string then validate |
+        | `.default(x)` | Use x when arg is undefined |
+        | `.oneOf([...])` | Restrict to an allowed set of values |
+        | `.between(a, b)` | Number must be in range |
+        | `.minLength(n)` | String or array minimum length |
+        | `.match(/re/)` | String must match regex |
+        | `.hasKeys([...])` | Map must contain listed keys |
+
+        ### Example
+
+        ```yaml
+        jobs:
+        - name : Import Data
+          check:
+            in:
+              inputFile: isString
+              port     : toNumber.isNumber.default(5432)
+              mode     : isString.oneOf(['fast','safe']).default('safe')
+              tags     : isArray.default([])
+              enabled  : toBoolean.isBoolean.default(true)
+              timeout  : isNumber.between(1000,60000).default(30000)
+            out:
+              rowCount : isNumber.default(0)
+              status   : isString.oneOf(['ok','error'])
+          exec : | #js
+            // args.port is already a number; args.mode is guaranteed 'fast' or 'safe'
+            args.rowCount = 42
+            args.status   = "ok"
+        ```
+
+        ### Validation in todo entries
+
+        ```yaml
+        todo:
+        - name: Import Data
+          args:
+            inputFile: data.csv
+            port     : "5432"      # string — toNumber coerces it
+            mode     : fast
+        ```
+
+      shell.md: |
+        ## Shell jobs — lang: shell
+
+        Set `lang: shell` to run the exec body as a shell script instead of JavaScript.
+
+        ### Arg flow
+
+        - Input args are available as the env variable `$aInputArgs` (a JSON string).
+          Individual values can be referenced inside the script as `\{{argName}}` tokens,
+          which oJob substitutes before executing the script.
+        - Output: print a single JSON object to stdout on the last line; oJob merges it
+          back into args. All other output lines are treated as log output.
+
+        ### Minimal example
+
+        ```yaml
+        jobs:
+        - name: Check Disk
+          lang: shell
+          check:
+            in:
+              path: isString.default("/")
+          exec: | #shell
+            USAGE=$(df -h \{{path}} | tail -1 | awk '{print $5}')
+            echo "{\"diskUsage\": \"$USAGE\"}"
+        ```
+
+        ### Reading the full args map
+
+        ```yaml
+        jobs:
+        - name: Run Script
+          lang: shell
+          exec: | #shell
+            echo "All args: $aInputArgs"
+            INFILE=$(echo "$aInputArgs" | python3 -c "import sys,json; print(json.load(sys.stdin)['inputFile'])")
+            COUNT=$(wc -l < "$INFILE")
+            echo "{\"lineCount\": $COUNT}"
+        ```
+
+        ### Shell with log prefix
+
+        ```yaml
+        jobs:
+        - name: Install Packages
+          lang: shell
+          typeArgs:
+            shellPrefix: install
+          exec: | #shell
+            apt-get update
+            apt-get install -y curl jq
+            echo "{}"
+        ```
+
+        ### Multi-step shell job with error exit
+
+        ```yaml
+        jobs:
+        - name: Build and Test
+          lang: shell
+          exec: | #shell
+            set -e
+            ./gradlew build
+            ./gradlew test
+            echo "{\"buildStatus\": \"success\"}"
+        ```
+
+        ### Mixed JS + shell in one oJob
+
+        ```yaml
+        jobs:
+        - name: Prepare
+          exec: | #js
+            args.target = io.readFileString("target.txt").trim()
+
+        - name: Deploy
+          lang: shell
+          exec: | #shell
+            echo "Deploying to \{{target}}..."
+            rsync -av dist/ user@\{{target}}:/var/www/
+            echo "{\"deployed\": true}"
+
+        todo:
+        - Prepare
+        - Deploy
+        ```
+
+      shortcuts.md: |
+        ## oJob shortcuts — concise todo operations
+
+        Shortcuts appear directly in the `todo` array (or inside `((then))`/`((else))` blocks).
+        Single parens `(name)` is the primary arg; double parens `((arg))` are named options.
+
+        ### Conditional — (if)
+
+        ```yaml
+        todo:
+        - (if    ): "args.env == 'prod'"
+          ((then)):
+          - Deploy to Prod
+          ((else)):
+          - Deploy to Staging
+        ```
+
+        ### Parallel execution — (parallel)
+
+        ```yaml
+        todo:
+        - (parallel):
+          - Check Service A
+          - Check Service B
+          - Check Service C
+        ```
+
+        ### Pass args inline — (pass)
+
+        ```yaml
+        todo:
+        - (pass):
+            env   : prod
+            region: eu-west-1
+        - Deploy
+        ```
+
+        ### Set / get a global key — (set) / (get)
+
+        ```yaml
+        todo:
+        - (set  ): configKey
+          ((data)): { host: "db.example.com", port: 5432 }
+        - (get  ): configKey
+        ```
+
+        ### Output results — (output)
+
+        ```yaml
+        todo:
+        - (output  ): results
+          ((format)): json
+        ```
+
+        ### Call a function — (fn)
+
+        ```yaml
+        todo:
+        - (fn): ow.loadFormat
+        ```
+
+        ### Load a file into args — (fileget)
+
+        ```yaml
+        todo:
+        - (fileget): config.yaml
+          ((out  )): config
+        ```
+
+        ### Run an external oJob — (runfile)
+
+        ```yaml
+        todo:
+        - (runfile): deploy.yaml
+          ((args )): { target: "prod" }
+        ```
+
+        ### Channel operation — (ch)
+
+        ```yaml
+        todo:
+        - (ch  ): results
+          ((op)): set
+          ((k )): { id: 1 }
+          ((v )): { status: "done" }
+        ```
+
+        ### Repeat N times — (repeat)
+
+        ```yaml
+        todo:
+        - (repeat): 3
+          ((todo)):
+          - Retry Job
+        ```
+
+        ### Loop over a collection — (each)
+
+        ```yaml
+        todo:
+        - (each  ): items
+          ((todo)):
+          - Process Item
+        ```
+
+        ### Switch on a value — (options)
+
+        ```yaml
+        todo:
+        - (options): environment
+          ((dev  )):
+          - Dev Setup
+          ((prod )):
+          - Prod Setup
+        ```
+
+        ### State guard — (state) / when
+
+        ```yaml
+        todo:
+        - (state): ready
+        - name   : Guarded Job
+          when   : ready
+        ```
+
+        ### Wait — (wait)
+
+        ```yaml
+        todo:
+        - (wait): 5000    # wait 5 seconds
+        ```
+
+        ### Print markdown — (printmd)
+
+        ```yaml
+        todo:
+        - (printmd): |
+            # Report
+            Items processed: \{{count}}
+        ```
+
+        ### LLM prompt — (llm)
+
+        ```yaml
+        todo:
+        - (llm      ): "Summarise the following in 3 bullet points"
+          ((inKey  )): rawData
+          ((context)): "monthly sales records"
+          ((outPath)): summary
+        ```
+
+        ### Security secrets — (secget)
+
+        ```yaml
+        todo:
+        - (secget     ): "db.password"
+          ((secRepo  )): "myrepo"
+          ((secBucket)): "app-secrets"
+        ```
+
+      includes.md: |
+        ## oJob includes and oPacks
+
+        ### include — full oJob (jobs + todo executed)
+
+        Loads another oJob file and runs both its jobs and its todo list.
+        Use for composing complete sub-workflows.
+
+        ```yaml
+        include:
+        - common-setup.yaml              # local file
+        - oJob-common::oJobTest.yaml     # from an installed oPack
+        - ojob.io/docker/_common         # remote ojob.io job, fetched at runtime
+        ```
+
+        ### jobsInclude — job definitions only (todo not run)
+
+        Imports job definitions without triggering the included file's todo.
+        Use for reusable job libraries.
+
+        ```yaml
+        jobsInclude:
+        - ojob.io/util/osArch            # adds "Get current OS and Arch" job
+        - shared/db-jobs.yaml            # local shared definitions
+        ```
+
+        ### oPacks declaration
+
+        Declare required oPacks in `ojob.opacks`; oJob installs them if missing.
+
+        ```yaml
+        ojob:
+          opacks:
+          - openaf: ">=20230601"   # minimum version constraint
+          - S3                     # latest version
+          - oJob-common
+        ```
+
+        ### owraps and loadLibs
+
+        ```yaml
+        ojob:
+          owraps  :
+          - Server    # loads ow.server.*
+          - Java      # loads ow.java.*
+          loadLibs:
+          - s3.js     # JS library from an installed oPack
+        ```
+
+        ### Multi-file oJob pattern
+
+        Split large oJobs across files using Namespace::JobName conventions:
+
+        ```yaml
+        # main.yaml — entry point
+        include:
+        - jobs/setup.yaml
+        - jobs/process.yaml
+
+        todo:
+        - Setup::Init
+        - Process::Run
+        - Setup::Teardown
+        ```
+
+        ```yaml
+        # jobs/setup.yaml — job definitions only, no top-level todo
+        jobs:
+        - name: Setup::Init
+          exec: | #js
+            log("initialising environment")
+
+        - name: Setup::Teardown
+          type: shutdown
+          exec: | #js
+            log("releasing resources")
+        ```
+
+        ### Referencing remote ojob.io jobs
+
+        ```yaml
+        include:
+        - ojob.io/docker/_common     # provides Docker connect/disconnect jobs
+
+        jobsInclude:
+        - ojob.io/util/osArch        # adds "Get current OS and Arch" job only
+
+        jobs:
+        - name: Build Image
+          from: Check for docker     # job provided by ojob.io/docker/_common
+          exec: | #js
+            $sh("docker build -t myimage .").get(0)
+        ```
+
+      common.md: |
+        ## oJob-common modules
+
+        Declare `oJob-common` in `ojob.opacks`, then include the module you need.
+
+        ```yaml
+        ojob:
+          opacks:
+          - oJob-common
+        ```
+
+        ---
+
+        ### oJobBasics — general utilities
+
+        Provides simple utility jobs: start/stop/exit, sleep, stringify, set/get paths.
+
+        ```yaml
+        include:
+        - oJob-common::oJobBasics.yaml
+
+        todo:
+        - oJob Start
+        - My Job
+        - oJob Stop
+        ```
+
+        ---
+
+        ### oJobTest — unit test framework
+
+        One init job loads the JS test file; each test job chains `from: Init` → `to: oJob Test`.
+
+        ```yaml
+        include:
+        - oJob-common::oJobTest.yaml   # provides the "oJob Test" runner job
+
+        jobs:
+        - name: MyArea::Init
+          exec: | #js
+            args.tests = require("autoTestAll.MyArea.js")
+
+        - name: MyArea::Basic case
+          from: MyArea::Init
+          to  : oJob Test
+          exec: args.func = args.tests.testBasicCase
+
+        - name: MyArea::Error path
+          from: MyArea::Init
+          to  : oJob Test
+          exec: args.func = args.tests.testErrorPath
+
+        todo:
+        - MyArea::Init
+        - MyArea::Basic case
+        - MyArea::Error path
+        ```
+
+        Companion JS file (`autoTestAll.MyArea.js`):
+
+        ```javascript
+        (function() {
+          exports.testBasicCase = function() {
+            ow.loadFormat()
+            ow.test.assert(myFunc("hello"), "HELLO", "should uppercase")
+          }
+
+          exports.testErrorPath = function() {
+            var threw = false
+            try { myFunc(null) } catch(e) { threw = true }
+            ow.test.assert(threw, true, "should throw on null input")
+          }
+        })()
+        ```
+
+        ---
+
+        ### oJobSQL — database operations
+
+        ```yaml
+        include:
+        - oJob-common::oJobSQL.yaml
+
+        jobs:
+        - name: Query Orders
+          exec: | #js
+            args.rows = $job("SQL Execute Query", {
+              sql: "SELECT * FROM orders WHERE status = 'open'",
+              db : global.db
+            }).results
+
+        todo:
+        - Query Orders
+        ```
+
+        ---
+
+        ### oJobHTTPd — embedded HTTP server
+
+        ```yaml
+        include:
+        - oJob-common::oJobHTTPd.yaml
+
+        ojob:
+          daemon: true
+
+        todo:
+        - name: Start HTTPd
+          args:
+            port: 8080
+            host: "0.0.0.0"
+        - name  : HTTPd handler
+          args  :
+            uri    : /api/status
+            handler: | #js
+              return { status: "ok", time: now() }
+        ```
+
+        ---
+
+        ### oJobIO — file I/O utilities
+
+        ```yaml
+        include:
+        - oJob-common::oJobIO.yaml
+        ```
+
+        Provides jobs for file copy, move, delete, compress, and recursive folder operations.
+
 - name: suggest-skills
   title: "Suggest Skills from History"
   description: "Analyzes conversation history from ~/.openaf-mini-a/history/*.json to identify recurring task patterns not yet covered by existing commands or skills, then suggests concrete new skills to build."
