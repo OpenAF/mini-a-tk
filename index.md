@@ -58,9 +58,17 @@ Target: &#123;&#123;arg1&#125;&#125;
 Raw args: &#123;&#123;args&#125;&#125;
 Parsed args: &#123;&#123;argv&#125;&#125;</code></pre><p>Run it in the console:</p><pre><code class="language-bash">/my-command repo-a --fast "include docs"</code></pre><p>Run it directly from the CLI:</p><pre><code class="language-bash">mini-a exec="/my-command repo-a --fast \"include docs\""</code></pre><p>Load commands from extra directories:</p><pre><code class="language-bash">mini-a extracommands=/path/to/team-commands,/path/to/project-commands</code></pre><p>Notes:</p><ul><li>Default commands in <code>~/.openaf-mini-a/commands/</code> win over <code>extracommands</code>.</li><li>Earlier <code>extracommands</code> paths win over later ones.</li><li>Built-ins such as <code>/help</code> still win over custom commands.</li></ul></details>
 
-<details><summary><strong>2. Add a skill</strong></summary><p>mini-a supports two skill layouts:</p><pre><code>~/.openaf-mini-a/skills/my-skill/SKILL.md
-~/.openaf-mini-a/skills/my-skill.md</code></pre><p>Example single-file skill:</p><pre><code class="language-markdown">Review the current change carefully.
-Focus on correctness, edge cases, and missing tests.</code></pre><p>Invoke it with either form:</p><pre><code class="language-bash">/my-skill src/auth
+<details><summary><strong>2. Add a skill</strong></summary><p>mini-a supports classic markdown skills and self-contained YAML skills. Common layouts:</p><pre><code>~/.openaf-mini-a/skills/my-skill/SKILL.yaml
+~/.openaf-mini-a/skills/my-skill/SKILL.md
+~/.openaf-mini-a/skills/my-skill.md</code></pre><p>Generate a starter YAML skill:</p><pre><code class="language-bash">mkdir -p ~/.openaf-mini-a/skills/my-skill
+mini-a --skills > ~/.openaf-mini-a/skills/my-skill/SKILL.yaml</code></pre><p>Minimal YAML skill example:</p><pre><code class="language-yaml">schema: mini-a.skill/v1
+name: my-skill
+summary: Review a change carefully
+
+body: |
+  Review the current change carefully.
+  Focus on correctness, edge cases, and missing tests.
+</code></pre><p>Invoke it with either form:</p><pre><code class="language-bash">/my-skill src/auth
 $my-skill src/auth</code></pre><p>Load skills from extra directories:</p><pre><code class="language-bash">mini-a extraskills=/path/to/shared-skills,/path/to/project-skills</code></pre><p>Notes:</p><ul><li>Default skills in <code>~/.openaf-mini-a/skills/</code> win over <code>extraskills</code>.</li><li>If a skill and a slash command share the same name, the skill wins.</li><li>Use <code>/skills</code> or <code>/skills &lt;prefix&gt;</code> to list discovered skills.</li></ul></details>
 
 <details><summary><strong>3. Add a hook</strong></summary><p>Create a hook definition in <code>~/.openaf-mini-a/hooks/*.yaml</code>, <code>*.yml</code>, or <code>*.json</code>:</p><pre><code class="language-yaml">name: block-dangerous-shell

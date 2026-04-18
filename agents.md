@@ -14,6 +14,8 @@ mini-a agent=my-agent.agent.md goal="your goal here"
 mini-a --agent > my-agent.agent.md
 ```
 
+The `mini-a:` frontmatter section can override defaults that were not explicitly set on the CLI, including values injected by mode presets. Explicit CLI flags still take precedence.
+
 See the [mini-a agent file docs](https://mini-a.ai/agents) for the full frontmatter reference.
 
 ---
