@@ -494,3 +494,43 @@
         - Register the new YAML in `autoTestAll.allJobs.yaml`
         - Run one area: `ojob autoTestAll.<Area>.yaml`
         - Run full suite: `ojob autoTestAll.yaml`
+
+- name: suggest-skills
+  title: "Suggest Skills from History"
+  description: "Analyzes conversation history from ~/.openaf-mini-a/history/*.json to identify recurring task patterns not yet covered by existing commands or skills, then suggests concrete new skills to build."
+  tags: [history, analysis, productivity, introspection]
+  usage: "/suggest-skills"
+  code: |
+    # Suggest Skills from History
+
+    Analyze the user's conversation history to find recurring task patterns and
+    recommend new mini-a skills that would automate or streamline them.
+
+    ## Step 1 — Inventory existing commands and skills
+
+    ```bash
+    ls ~/.openaf-mini-a/commands/*.md 2>/dev/null | xargs -I{} basename {} .md
+    ls ~/.openaf-mini-a/skills/ 2>/dev/null
+    ```
+
+    ## Step 2 — Analyze history
+
+    Run a Python script to parse ~/.openaf-mini-a/history/*.json, extract the
+    first substantive user goal per conversation (filtering noise like "yes",
+    "ok", arithmetic), and print all goals.
+
+    ## Step 3 — Cluster goals into themes
+
+    Group goals by topic (code-analysis, network-lookup, web-research, etc.)
+    and count frequency per theme.
+
+    ## Step 4 — Subtract covered themes
+
+    Cross-reference with the inventory from Step 1 and mark already-covered
+    themes (git operations, cheatsheet, scaffolding, humanizer, …).
+
+    ## Step 5 — Generate the report
+
+    Print a prioritised Markdown report of suggested skills (frequency ≥ 3),
+    each with: gap description, trigger phrases, example goals, and a proposed
+    skill description. Include an "Already Covered" summary table.
