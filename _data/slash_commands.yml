@@ -515,3 +515,165 @@
     mini-a agent=<filename>
     mini-a agent=<filename> goal="override goal here"
     ```
+
+# -----------------------
+- name       : gits-update
+  title      : "/gits-update"
+  description: "Scan immediate subfolders for git repositories, safely update the ones that can be fast-forwarded, and show a concise status table."
+  tags       : [git, repos, update, sync, report]
+  usage      : "/gits-update"
+  code       : |
+    ---
+    name: gits-update
+    description: Scan immediate subfolders for git repositories, safely update the ones that can be fast-forwarded, and show a concise status table.
+    tags: [git, repos, update, sync, report]
+    ---
+
+    Scan the immediate subfolders of the current path, identify which ones are git repositories, and safely update each repository only when doing so will not overwrite local work.
+
+    ## Step 1 — Discover candidate folders
+
+    Enumerate only the **immediate child directories** of the current working directory, sorted by folder name.
+
+    For each folder, determine whether it is a git repository by running:
+
+    ```sh
+    git -C "<folder>" rev-parse --git-dir 2>/dev/null
+    ```
+
+    Ignore folders that are not git repositories.
+
+    If no git repositories are found, stop and show:
+
+    `😶 No git repositories found in the current folder.`
+
+    ## Step 2 — Collect repo state
+
+    For each detected git repository, gather:
+
+    - Repository folder name
+    - Current branch:
+      ```sh
+      git -C "<folder>" rev-parse --abbrev-ref HEAD
+      ```
+    - Working tree state:
+      ```sh
+      git -C "<folder>" status --porcelain
+      ```
+    - Upstream branch:
+      ```sh
+      git -C "<folder>" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
+      ```
+    - Whether remote `origin` exists:
+      ```sh
+      git -C "<folder>" remote get-url origin 2>/dev/null
+      ```
+
+    ## Step 3 — Apply conservative safety rules
+
+    Before attempting any update, classify each repository:
+
+    - `⛔ dirty` — skip if `git status --porcelain` is not empty
+    - `🧷 detached` — skip if branch is `HEAD`
+    - `🚫 no-origin` — skip if remote `origin` does not exist
+    - `🔎 no-upstream` — skip if there is no upstream tracking branch
+
+    For any skipped repository, record the exact reason and do **not** modify it.
+
+    ## Step 4 — Refresh remote state safely
+
+    For repositories that passed the safety rules, run:
+
+    ```sh
+    git -C "<folder>" fetch --prune origin
+    ```
+
+    If fetch fails, mark the repository as:
+
+    - `❌ fetch-failed` — include a short reason from stderr
+
+    Continue processing the remaining repositories.
+
+    ## Step 5 — Compare local branch with upstream
+
+    For each repository with a successful fetch, compute:
+
+    ```sh
+    LOCAL=$(git -C "<folder>" rev-parse @)
+    REMOTE=$(git -C "<folder>" rev-parse '@{u}')
+    BASE=$(git -C "<folder>" merge-base @ '@{u}')
+    ```
+
+    Classify using these rules:
+
+    - If `LOCAL = REMOTE`: `✅ synced` — already up to date
+    - If `LOCAL = BASE` and `REMOTE != BASE`: `⬇️ behind` — safe to fast-forward
+    - If `REMOTE = BASE` and `LOCAL != BASE`: `⬆️ ahead` — local branch is ahead of origin; do not pull
+    - Otherwise: `🔀 diverged` — local and remote have diverged; do not pull
+
+    ## Step 6 — Update only when fast-forward is safe
+
+    Only for repositories classified as `⬇️ behind`, run:
+
+    ```sh
+    git -C "<folder>" pull --ff-only --prune
+    ```
+
+    Interpret the result as:
+
+    - `🟢 updated` — fast-forward pull succeeded
+    - `❌ pull-failed` — pull failed; capture the short reason
+
+    Never use merge pulls, rebases, stashing, resets, or force operations.
+
+    ## Step 7 — Build the final report
+
+    Show one concise markdown table, sorted by **folder name**, with these columns:
+
+    `Folder | Branch | Origin Sync | Result | Notes`
+
+    Use short, terminal-friendly emoticons in the `Origin Sync` and `Result` columns. Preferred labels:
+
+    - `✅ synced`
+    - `⬇️ behind`
+    - `⬆️ ahead`
+    - `🔀 diverged`
+    - `⛔ dirty`
+    - `🧷 detached`
+    - `🚫 no-origin`
+    - `🔎 no-upstream`
+    - `🟢 updated`
+    - `⏭️ skipped`
+    - `❌ fetch-failed`
+    - `❌ pull-failed`
+
+    Keep `Notes` short and concrete, for example:
+
+    - `clean fast-forward available`
+    - `updated from origin/main`
+    - `2 local changes present`
+    - `branch ahead of origin`
+    - `local and remote diverged`
+    - `no tracking branch configured`
+    - `fetch error: network/auth`
+
+    ## Step 8 — Add a compact summary
+
+    After the table, print a one-line summary like:
+
+    `Summary: 🟢 3 updated | ✅ 5 already synced | ⏭️ 4 skipped | ❌ 1 failed`
+
+    Then, if there were skipped or failed repositories, add a very short legend:
+
+    - `⏭️ skipped` means an update could overwrite local work or needs manual intervention
+    - `❌ failed` means git could not safely complete the remote operation
+
+    ## Output style
+
+    Keep the report concise, visually clean, and pleasant in the terminal interface:
+
+    - Prefer short wording over explanations
+    - Use emoticons consistently
+    - Do not print full git command output unless needed for a failure note
+    - Always sort rows by folder name
+    - Do not include non-repository folders in the final table
