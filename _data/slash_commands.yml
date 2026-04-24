@@ -104,6 +104,62 @@
     3. Key algorithms or patterns used
     4. Any gotchas or non-obvious behaviour
 
+# ----------------
+- name: docs-sync
+  title: "/docs-sync"
+  description: "Compare recent code changes with project docs and identify missing, stale, or inconsistent documentation."
+  tags: [docs, review, maintenance]
+  usage: "/docs-sync"
+  code: |
+    ---
+    name: docs-sync
+    description: Compare recent code changes with project docs and identify missing, stale, or inconsistent documentation.
+    tags: [docs, review, maintenance]
+    ---
+
+    Review the current repository changes and check whether documentation needs updating.
+
+    ## Step 1 — Gather change context
+
+    Run:
+
+    - `git status --short`
+    - `git diff --stat HEAD`
+    - `git diff HEAD`
+
+    Also inspect likely documentation sources:
+
+    - `README.md`
+    - `docs/**`
+    - `*.md`
+    - CLI help text, package metadata, examples, or generated reference pages if present
+
+    ## Step 2 — Detect documentation drift
+
+    Look for:
+
+    - New or changed CLI flags, commands, config keys, environment variables, or defaults
+    - New, renamed, or removed APIs, examples, agents, skills, hooks, or slash commands
+    - Behaviour changes that are not reflected in usage examples or reference docs
+    - Documentation that still mentions removed or renamed functionality
+    - Missing setup, migration, troubleshooting, or compatibility notes
+
+    ## Step 3 — Report findings
+
+    Output a markdown table with these columns:
+
+    `Area | Source change | Documentation impact | Suggested update`
+
+    Keep each row concrete and tie every suggested doc update to a specific source change.
+
+    If no documentation updates are needed, say that clearly and mention the files checked.
+
+    ## Step 4 — Offer to patch
+
+    Ask whether to apply the suggested documentation updates.
+
+    If approved, edit only the relevant documentation files. Keep the changes focused, preserve the existing style, and avoid unrelated rewrites.
+
 # ---------------
 - name: translate
   title: "/translate"
