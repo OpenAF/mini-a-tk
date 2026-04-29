@@ -853,7 +853,7 @@
 
     ## Step 5 — Present results in a structured report
 
-    Use `showMessage` to display a comprehensive report with this structure:
+    Display a comprehensive report with this structure:
 
     ---
 
