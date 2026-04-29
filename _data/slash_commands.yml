@@ -733,3 +733,202 @@
     - Do not print full git command output unless needed for a failure note
     - Always sort rows by folder name
     - Do not include non-repository folders in the final table
+
+- name       : git-stats
+  title      : "/git-stats"
+  description: "Analyze code statistics across the repository — counts code lines, comments, functions, classes, variables, and other metrics, organized by language and file."
+  tags       : [git, analysis, metrics, code-quality]
+  usage      : "/git-stats"
+  code       : |
+    ---
+    name: git-stats
+    description: Analyze code statistics across the repository — counts code lines, comments, functions, classes, variables, and other metrics, organized by language and file.
+    tags: [git, analysis, metrics, code-quality]
+    ---
+
+    Perform a comprehensive code statistics analysis of the repository. Follow these steps:
+
+    ## Step 1 — Gather repository context
+
+    Run these commands to understand the repo shape:
+
+    - `git rev-parse --abbrev-ref HEAD` — current branch
+    - `git rev-parse --show-toplevel` — repo root
+    - `git ls-files` — all tracked files
+
+    Identify the dominant tech stack from file extensions. Categorize files by language (JavaScript/TypeScript, Python, Java, Go, Ruby, C#, Rust, etc.).
+
+    ## Step 2 — Collect all code files
+
+    Using `git ls-files`, gather all code files (excluding tests, docs, binaries, node_modules, venv, etc.):
+
+    **Patterns to exclude:**
+    - `node_modules/`, `venv/`, `.venv/`, `dist/`, `build/`, `target/`, `.git/`
+    - `*.min.js`, `*.min.css`, `*.lock`, `package-lock.json`, `yarn.lock`, `Gemfile.lock`
+    - `test/`, `tests/`, `spec/`, `__pycache__/`, `.pytest_cache/`
+    - `README.md`, `LICENSE`, `*.json` (config files), `*.yaml`, `*.yml`, `*.xml`
+    - Coverage and artifact files
+    - Binary files and compiled code
+
+    Build a comprehensive list of source files by extension.
+
+    ## Step 3 — Analyze each file
+
+    For each code file, calculate these metrics:
+
+    - **Lines of Code (LOC)**: Total lines (non-empty, non-comment)
+    - **Total Lines**: All lines including whitespace
+    - **Comment Lines**: Lines containing only comments or comments inline
+    - **Blank Lines**: Empty or whitespace-only lines
+    - **Functions/Methods**: Count of function/method definitions (language-specific patterns)
+    - **Classes/Types**: Count of class, interface, struct, trait definitions
+    - **Variables**: Count of top-level or significant variable declarations
+    - **Complexity indicators**: Nested depth (max nesting level), cyclomatic patterns (if/else/switch branches)
+
+    **Language-specific patterns:**
+
+    **JavaScript/TypeScript:**
+    ```
+    - Functions: /function\s+\w+|const\s+\w+\s*=\s*(async\s*)?\(|=>|class\s+\w+/
+    - Classes: /class\s+\w+|interface\s+\w+|type\s+\w+\s*=/
+    - Variables: /const\s+\w+|let\s+\w+|var\s+\w+/
+    - Comments: //.*|/\*.*?\*/ (single and multiline)
+    ```
+
+    **Python:**
+    ```
+    - Functions: /def\s+\w+\(|@property|@staticmethod|@classmethod/
+    - Classes: /class\s+\w+/
+    - Variables: /\w+\s*=/
+    - Comments: #.*
+    ```
+
+    **Java/C#:**
+    ```
+    - Functions: /public|private|protected)\s+\w+\s+\w+\(|void\s+\w+\(/
+    - Classes: /(public|private)?\s*class\s+\w+|interface\s+\w+/
+    - Variables: /\w+\s+\w+\s*=|private\s+\w+/
+    - Comments: //.*|/\*.*?\*/
+    ```
+
+    **Go:**
+    ```
+    - Functions: /func\s+\(?\w+\)?\s+\w+\(|func\s+\w+\(/
+    - Types/Structs: /type\s+\w+\s+struct|interface\s+\{/
+    - Variables: /var\s+\w+|const\s+\w+/
+    - Comments: //.*
+    ```
+
+    **Ruby:**
+    ```
+    - Functions: /def\s+\w+/
+    - Classes: /class\s+\w+/
+    - Variables: /@\w+|@@\w+|\$\w+/
+    - Comments: #.*
+    ```
+
+    **Rust:**
+    ```
+    - Functions: /fn\s+\w+\(/
+    - Structs/Traits: /struct\s+\w+|trait\s+\w+|impl\s+\w+/
+    - Variables: /let\s+\w+|const\s+\w+/
+    - Comments: //.*|/\*.*?\*/
+    ```
+
+    ## Step 4 — Aggregate and calculate project-wide metrics
+
+    After analyzing all files, calculate:
+
+    - **Total LOC**: Sum of code lines across all files
+    - **Total Comments**: Sum of comment lines
+    - **Total Blank Lines**: Sum of blank lines
+    - **Comment Ratio**: (Comments / Total LOC) × 100%
+    - **Functions**: Total count
+    - **Classes/Types**: Total count
+    - **Variables**: Total count
+    - **Average File Size**: LOC per file (mean)
+    - **Largest File**: File with highest LOC
+    - **Files by Language**: Count of files per language
+    - **Cyclomatic Complexity Indicators**: Average nesting depth, branch density
+
+    ## Step 5 — Present results in a structured report
+
+    Use `showMessage` to display a comprehensive report with this structure:
+
+    ---
+
+    ### Code Statistics Report — `<repo-name>` (`<branch>`)
+
+    #### Project Overview
+
+    | Metric | Value |
+    |---|---|
+    | **Total Files Analyzed** | N |
+    | **Total Lines of Code (LOC)** | N |
+    | **Total Comment Lines** | N |
+    | **Total Blank Lines** | N |
+    | **Comment Ratio** | N% |
+    | **Total Functions/Methods** | N |
+    | **Total Classes/Types** | N |
+    | **Total Variables** | N |
+    | **Average LOC per File** | N |
+    | **Largest File (LOC)** | `path/to/file.ext` (N LOC) |
+
+    #### Files by Language
+
+    | Language | Files | LOC | Comments | Ratio |
+    |---|---|---|---|---|
+    | JavaScript | N | N | N | N% |
+    | TypeScript | N | N | N | N% |
+    | Python | N | N | N | N% |
+    | Java | N | N | N | N% |
+    | (etc.) | N | N | N | N% |
+
+    ---
+
+    #### Top 10 Largest Files by LOC
+
+    | File | LOC | Comments | Functions | Classes |
+    |---|---|---|---|---|
+    | `path/to/file1.ext` | N | N | N | N |
+    | `path/to/file2.ext` | N | N | N | N |
+    | (etc.) | N | N | N | N |
+
+    ---
+
+    #### Code Quality Insights
+
+    - **Code Density:** Ratio of code to comments (highlight if < 3:1 or > 10:1)
+    - **File Complexity:** Files with highest function/class density or nesting depth
+    - **Architecture Pattern:** Estimated structure (monolithic, modular, layered)
+    - **Documentation Coverage:** Comment to code ratio assessment
+
+    ---
+
+    #### Recommendations
+
+    - Highlight any language clusters (if 80%+ is one language, note it)
+    - Suggest files that may benefit from refactoring (too large, low comment ratio)
+    - Note any patterns observed (high cyclomatic complexity in certain modules)
+    - Actionable improvements for code maintainability
+
+    ---
+
+    ## Step 6 — Optional: Interactive breakdowns
+
+    If the user requests, offer drill-down analysis:
+
+    - **By file:** Show detailed stats for a specific file
+    - **By language:** Compare metrics across different languages
+    - **By directory:** Analyze stats per directory/module
+    - **Trend analysis:** If git history is available, show LOC growth over time
+
+    Prompt with options like:
+    ```
+    Would you like to explore further?
+    - [1] File-by-file breakdown
+    - [2] Stats by language
+    - [3] Stats by directory
+    - [4] LOC growth history
+    - [x] Done
+    ```
