@@ -1088,3 +1088,106 @@
     - [4] LOC growth history
     - [x] Done
     ```
+
+- name       : wiki-sync-path
+  title      : "/wiki-sync-path"
+  description: "Review a filesystem path recursively and update the wiki with relevant knowledge extracted from files."
+  tags       : [wiki, ingest, knowledge]
+  usage      : "/wiki-sync-path [path]"
+  code       : |
+    ---
+    name: wiki-sync-path
+    description: Review a filesystem path recursively and update the wiki with relevant knowledge extracted from files.
+    tags: [wiki, ingest, knowledge]
+    ---
+
+    Review and ingest knowledge from a local folder tree into the active mini-a wiki.
+
+    ## Step 1 — Validate wiki and target path
+
+    1. Confirm wiki is enabled (`usewiki=true`) and writable (`wikiaccess=rw`).
+       If not, stop and say:
+       - "Wiki is not enabled. Start mini-a with `usewiki=true wikiaccess=rw` to use this command."
+       - or "Wiki is read-only. Restart with `wikiaccess=rw` to allow updates."
+    2. Determine the target path:
+       - If the user provided a path argument, use it.
+       - Otherwise use the current working directory (`.`).
+    3. Resolve the path to an absolute path and verify it exists and is a directory.
+       If invalid, stop and report the exact path problem.
+
+    ## Step 2 — Build a file inventory
+
+    Recursively scan the target directory and collect candidate text files.
+
+    Include by default:
+    - `*.md`, `*.txt`, `*.rst`
+    - `*.json`, `*.yaml`, `*.yml`, `*.toml`, `*.ini`
+    - source/config files that are useful for knowledge (`*.js`, `*.ts`, `*.py`, `*.go`, `Dockerfile`, `Makefile`, `README*`)
+
+    Exclude by default:
+    - hidden VCS/build/dependency folders (`.git`, `.svn`, `node_modules`, `dist`, `build`, `.next`, `.cache`, `target`, `vendor`)
+    - binaries and media (`*.png`, `*.jpg`, `*.pdf`, `*.zip`, `*.jar`, `*.class`, etc.)
+    - very large files (over ~1 MB unless explicitly requested)
+
+    If more than 200 candidate files are found, present a short summary and ask for confirmation before continuing.
+
+    ## Step 3 — Extract relevant knowledge
+
+    Read candidates in manageable chunks and extract reusable knowledge only, such as:
+    - architecture and module responsibilities
+    - commands, workflows, and runbooks
+    - configuration keys and defaults
+    - conventions, guardrails, and troubleshooting notes
+    - glossary/domain concepts
+
+    Do not copy large raw file content into the wiki. Summarize and normalize.
+
+    Deduplicate aggressively:
+    - Merge repeated facts.
+    - Prefer the most specific and most recently updated source when conflicts appear.
+    - Mark uncertain/conflicting points under a `Known caveats` section.
+
+    ## Step 4 — Map knowledge into wiki pages
+
+    Use this structure unless the wiki already has an equivalent layout:
+    - `knowledge/<topic>/index.md` for topic summaries
+    - `knowledge/<topic>/commands.md` for operational commands
+    - `knowledge/<topic>/config.md` for settings and defaults
+    - `knowledge/<topic>/troubleshooting.md` for failure/recovery patterns
+
+    Before writing:
+    1. Run `wiki list` and `wiki tree`.
+    2. Reuse and update existing relevant pages instead of creating duplicates.
+    3. Keep front-matter consistent (`title`, `description`, `tags`, `updated`).
+
+    For each page touched:
+    - Use `wiki read` first.
+    - Then `wiki write` with merged content that preserves useful existing material and adds new validated knowledge.
+
+    ## Step 5 — Cross-link and verify
+
+    1. Ensure new/updated pages are linked from a relevant `index.md` (top-level or topic-level).
+    2. Run `wiki lint`.
+    3. Fix any new broken links introduced by this run.
+
+    ## Step 6 — Report results
+
+    Return a concise summary with:
+    - target path scanned
+    - files considered vs skipped
+    - pages created
+    - pages updated
+    - key new knowledge areas captured
+    - remaining caveats or conflicts
+
+    If no relevant knowledge was found, say so explicitly and do not create low-value pages.
+
+    ## Usage examples
+
+    - Scan current folder:
+      - `/wiki-sync-path`
+    - Scan provided folder:
+      - `/wiki-sync-path /Users/nunoaguiar/Documents/git/mini-a`
+
+    Run `mini-a --command` to confirm how to pass command arguments in your current setup.
+

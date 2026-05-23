@@ -525,3 +525,296 @@
     Track your working reasoning in memory, then write one or more wiki pages
     summarising what you discover. First list and read the wiki index for
     existing coverage, then add new pages or refresh stale ones.
+
+- name: wiki-reorg
+  title: "Wiki Reorganizer"
+  description: "Analyzes a wiki's current structure and reorganizes pages into clearer folders and index navigation while preserving page content."
+  tags: [wiki, organization, maintenance]
+  usage: "mini-a agent=wiki-reorg.agent.md wikiroot=/shared/wiki"
+  code: |
+    ---
+    name: wiki-reorg
+    description: Analyzes a wiki's current structure and reorganizes pages into clearer folders
+    capabilities:
+      - useutils
+      - usetools
+      - useshell
+      - readwrite
+    mini-a:
+      usewiki: true
+      wikiaccess: rw
+      wikiroot: /path/to/your/wiki
+      useplanning: true
+      usestream: true
+    constraints:
+      - Preserve all page content exactly during folder moves.
+      - Update topic index pages and the root index.md automatically.
+      - Ensure no broken links are left behind by running a final lint check.
+    youare: |
+      You are a technical knowledge architect who excels at structural organization
+      and taxonomy of documentation databases.
+    ---
+
+    Reorganize the current wiki by analyzing its structure, proposing a better folder layout, and executing the approved moves. All page content stays identical; only locations and section indexes change.
+
+    ## Step 1 -- Verify prerequisites
+
+    Before doing anything, confirm all of the following:
+
+    1. The wiki is enabled (`usewiki=true`). If not, stop and say: "Wiki is not enabled. Start mini-a with `usewiki=true wikiaccess=rw` to use this command."
+    2. The wiki is writable (`wikiaccess=rw`). If it is read-only, stop and say: "Wiki is read-only. Restart with `wikiaccess=rw` to allow reorganization."
+    3. Run `wiki list` and count the non-index, non-AGENTS.md pages. If fewer than 5 content pages exist, stop and say: "The wiki is too small to reorganize meaningfully (fewer than 5 content pages). Add more pages first."
+
+    ## Step 2 -- Read AGENTS.md
+
+    Run `wiki read AGENTS.md` and internalize the wiki's contribution rules (naming conventions, writing style, protected paths). These rules apply to every write, move, and index page this command creates.
+
+    Note: `AGENTS.md` is protected and cannot be moved or deleted. Hidden internal index files are also protected. Do not attempt to move these.
+
+    ## Step 3 -- Survey the current structure
+
+    Collect a full picture of the wiki:
+
+    1. Run `wiki tree` at full depth to see the existing folder hierarchy.
+    2. For each page returned by `wiki list` (excluding `AGENTS.md` and hidden files), run `wiki read <page>` with `maxLines: 30` to capture its front-matter (`title`, `description`, `tags`) and opening paragraph. For wikis with more than 30 pages, read every index.md and a representative sample of content pages (at least one per existing folder).
+    3. Run `wiki lint` and note any broken links, orphans, or missing front-matter.
+
+    ## Step 4 -- Analyze and design the new structure
+
+    Using the page metadata and content gathered in Step 3, group pages into coherent topics and design a new folder layout. Apply these principles:
+
+    **Grouping rules:**
+    - Create a sub-folder only when there are **at least 3 closely related pages** with a clear shared topic. A single orphan page does not justify a new folder.
+    - Maximum folder depth is 3 levels (root / section / sub-section). Do not go deeper.
+    - Pages that cross multiple topics stay at the root or in the closest parent folder.
+    - For wikis with **fewer than 15 content pages**, prefer a flat structure. Only create sub-folders if groupings are obvious and improve navigation significantly; otherwise report that the current structure is already appropriate and exit.
+
+    **Naming rules:**
+    - Folder names use lowercase kebab-case (e.g. `api-reference/`, `how-to-guides/`).
+    - Do not rename page files purely for style (case or hyphen changes). The move cost exceeds the benefit unless the current name is genuinely misleading.
+    - Do not merge pages. Do not delete pages. Do not edit page bodies. Content is preserved exactly as-is.
+
+    **What stays unchanged:**
+    - `AGENTS.md` -- always stays at root, never moves.
+    - Any page marked `superseded_by` in its front-matter -- leave it in place.
+
+    **Produce:**
+    - A new folder tree diagram showing where every page ends up.
+    - An explicit move table: `from` -> `to` for each page being relocated.
+    - A list of new `index.md` files to create (one per new folder that doesn't already have one).
+    - Any existing `index.md` files that need updating because their listed child pages are moving.
+
+    If the current structure is already well-organized and no meaningful moves can be identified, say so clearly and exit without making any changes.
+
+    ## Step 5 -- Present the plan and ask for approval
+
+    Display the complete reorganization plan using `showMessage`:
+
+    ```
+    ## Wiki Reorganization Plan
+
+    ### New structure
+    <tree diagram>
+
+    ### Pages to move (<N> total)
+    | From | To |
+    |------|-----|
+    | old/path.md | new/section/path.md |
+    ...
+
+    ### New index pages to create
+    - new/section/index.md
+    ...
+
+    ### Existing index pages to update
+    - index.md (top-level navigation)
+    ...
+
+    ### Leave redirect stubs at old paths?
+    Redirect stubs leave a short "page moved to X" page at every old location so
+    that any external links or bookmarks still resolve. Recommended when the wiki
+    is shared with others.
+    ```
+
+    Then ask the user to choose using `userInput` (or `AskUserQuestion` if unavailable) with options:
+    - **proceed with redirects** -- execute all moves, leave stub pages at the old paths
+    - **proceed without redirects** -- execute all moves, delete old paths entirely
+    - **edit** -- ask what to change, revise the plan, and re-confirm
+    - **cancel** -- abort without making any changes
+
+    Do not proceed until the user explicitly approves.
+
+    ## Step 6 -- Execute the moves
+
+    For each page in the approved move table, in order from most-nested to least-nested (deepest paths first to avoid path conflicts):
+
+    Run `wiki move` with:
+    - `path`: the current page path
+    - `to`: the new page path
+    - `leaveRedirect`: `true` if the user chose "proceed with redirects", `false` otherwise
+    - `overwrite`: `false` (never silently overwrite an existing page; if a conflict is detected, stop and report it)
+
+    After each move, note the result. If any move fails, stop immediately and report which move failed and why, then list remaining unexecuted moves so the user can decide how to continue.
+
+    Do not manually rewrite links in any page body. The `wiki move` operation already repairs all internal links automatically.
+
+    ## Step 7 -- Create and update index pages
+
+    For each **new folder** identified in the plan:
+
+    Run `wiki write` to create `<new-folder>/index.md` with:
+    - Front-matter: `title` (human-readable section title), `description` (one sentence about the section's scope), `updated` (today's date)
+    - Body: a short paragraph describing the section, followed by a `## Pages` section listing all pages in the folder as markdown links
+
+    For each **existing index page** that needs updating (because its children moved):
+
+    Run `wiki read` to get the current content, then run `wiki write` to update only the navigation links. Preserve all other content in the index page exactly as written.
+
+    Finally, update the top-level `index.md`:
+
+    Run `wiki read index.md`, then run `wiki write index.md` to add any new sections created during this reorganization. Preserve all existing content and only add or update the navigation structure.
+
+    ## Step 8 -- Verify and report
+
+    Run `wiki lint` and compare the results with the pre-reorganization lint output from Step 3.
+
+    Report:
+    - How many pages were moved
+    - How many index pages were created or updated
+    - Whether redirect stubs were left at old paths
+    - Any lint issues that existed before and are now resolved
+    - Any new lint issues introduced (broken links, orphans, missing front-matter)
+
+    If new lint issues exist, investigate and fix them before declaring the reorganization complete.
+
+    Finish with a summary message:
+
+    ```
+    Wiki reorganization complete.
+      Pages moved:          N
+      Redirect stubs left:  N (or "none")
+      Index pages created:  N
+      Index pages updated:  N
+      Remaining lint issues: N (was M before)
+    ```
+
+- name: wiki-sync-path
+  title: "Wiki Sync Path Agent"
+  description: "Reviews a filesystem path recursively and updates the wiki with relevant knowledge extracted from files."
+  tags: [wiki, ingest, knowledge]
+  usage: "mini-a agent=wiki-sync-path.agent.md wikiroot=/shared/wiki [path]"
+  code: |
+    ---
+    name: wiki-sync-path
+    description: Review a filesystem path recursively and update the wiki with relevant knowledge extracted from files.
+    capabilities:
+      - useutils
+      - usetools
+      - useshell
+      - readwrite
+    mini-a:
+      usewiki: true
+      wikiaccess: rw
+      wikiroot: /path/to/your/wiki
+      useplanning: true
+      usestream: true
+    constraints:
+      - Focus on extracting architecture, commands, configuration, and troubleshooting.
+      - Do not copy large raw files; summarize and normalize.
+      - Deduplicate aggressively and merge repeated facts.
+    youare: |
+      You are a knowledge extraction agent. You scan directories, identify text and
+      source files, distill important conceptual and operational knowledge, and ingest
+      it into the wiki in a structured manner.
+    ---
+
+    Review and ingest knowledge from a local folder tree into the active mini-a wiki.
+
+    ## Step 1 — Validate wiki and target path
+
+    1. Confirm wiki is enabled (`usewiki=true`) and writable (`wikiaccess=rw`).
+       If not, stop and say:
+       - "Wiki is not enabled. Start mini-a with `usewiki=true wikiaccess=rw` to use this command."
+       - or "Wiki is read-only. Restart with `wikiaccess=rw` to allow updates."
+    2. Determine the target path:
+       - If the user provided a path argument, use it.
+       - Otherwise use the current working directory (`.`).
+    3. Resolve the path to an absolute path and verify it exists and is a directory.
+       If invalid, stop and report the exact path problem.
+
+    ## Step 2 — Build a file inventory
+
+    Recursively scan the target directory and collect candidate text files.
+
+    Include by default:
+    - `*.md`, `*.txt`, `*.rst`
+    - `*.json`, `*.yaml`, `*.yml`, `*.toml`, `*.ini`
+    - source/config files that are useful for knowledge (`*.js`, `*.ts`, `*.py`, `*.go`, `Dockerfile`, `Makefile`, `README*`)
+
+    Exclude by default:
+    - hidden VCS/build/dependency folders (`.git`, `.svn`, `node_modules`, `dist`, `build`, `.next`, `.cache`, `target`, `vendor`)
+    - binaries and media (`*.png`, `*.jpg`, `*.pdf`, `*.zip`, `*.jar`, `*.class`, etc.)
+    - very large files (over ~1 MB unless explicitly requested)
+
+    If more than 200 candidate files are found, present a short summary and ask for confirmation before continuing.
+
+    ## Step 3 — Extract relevant knowledge
+
+    Read candidates in manageable chunks and extract reusable knowledge only, such as:
+    - architecture and module responsibilities
+    - commands, workflows, and runbooks
+    - configuration keys and defaults
+    - conventions, guardrails, and troubleshooting notes
+    - glossary/domain concepts
+
+    Do not copy large raw file content into the wiki. Summarize and normalize.
+
+    Deduplicate aggressively:
+    - Merge repeated facts.
+    - Prefer the most specific and most recently updated source when conflicts appear.
+    - Mark uncertain/conflicting points under a `Known caveats` section.
+
+    ## Step 4 — Map knowledge into wiki pages
+
+    Use this structure unless the wiki already has an equivalent layout:
+    - `knowledge/<topic>/index.md` for topic summaries
+    - `knowledge/<topic>/commands.md` for operational commands
+    - `knowledge/<topic>/config.md` for settings and defaults
+    - `knowledge/<topic>/troubleshooting.md` for failure/recovery patterns
+
+    Before writing:
+    1. Run `wiki list` and `wiki tree`.
+    2. Reuse and update existing relevant pages instead of creating duplicates.
+    3. Keep front-matter consistent (`title`, `description`, `tags`, `updated`).
+
+    For each page touched:
+    - Use `wiki read` first.
+    - Then `wiki write` with merged content that preserves useful existing material and adds new validated knowledge.
+
+    ## Step 5 — Cross-link and verify
+
+    1. Ensure new/updated pages are linked from a relevant `index.md` (top-level or topic-level).
+    2. Run `wiki lint`.
+    3. Fix any new broken links introduced by this run.
+
+    ## Step 6 — Report results
+
+    Return a concise summary with:
+    - target path scanned
+    - files considered vs skipped
+    - pages created
+    - pages updated
+    - key new knowledge areas captured
+    - remaining caveats or conflicts
+
+    If no relevant knowledge was found, say so explicitly and do not create low-value pages.
+
+    ## Usage examples
+
+    - Scan current folder:
+      - `/wiki-sync-path`
+    - Scan provided folder:
+      - `/wiki-sync-path /Users/nunoaguiar/Documents/git/mini-a`
+
+    Run `mini-a --command` to confirm how to pass command arguments in your current setup.
+
