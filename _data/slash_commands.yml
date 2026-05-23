@@ -160,6 +160,162 @@
 
     If approved, edit only the relevant documentation files. Keep the changes focused, preserve the existing style, and avoid unrelated rewrites.
 
+# ----------------
+- name: wiki-reorg
+  title: "/wiki-reorg"
+  description: "Analyze a wiki's structure and reorganize pages into clearer folders and index navigation while preserving page content."
+  tags: [wiki, organization, maintenance]
+  usage: "/wiki-reorg"
+  code: |
+    ---
+    name: wiki-reorg
+    description: Analyze a wiki's current structure and reorganize it by rethinking topic groupings, moving pages into meaningful sub-folders, and refreshing index pages -- while preserving all content exactly.
+    tags: [wiki, organization, maintenance]
+    ---
+
+    Reorganize the current wiki by analyzing its structure, proposing a better folder layout, and executing the approved moves. All page content stays identical; only locations and section indexes change.
+
+    ## Step 1 -- Verify prerequisites
+
+    Before doing anything, confirm all of the following:
+
+    1. The wiki is enabled (`usewiki=true`). If not, stop and say: "Wiki is not enabled. Start mini-a with `usewiki=true wikiaccess=rw` to use this command."
+    2. The wiki is writable (`wikiaccess=rw`). If it is read-only, stop and say: "Wiki is read-only. Restart with `wikiaccess=rw` to allow reorganization."
+    3. Run `wiki list` and count the non-index, non-AGENTS.md pages. If fewer than 5 content pages exist, stop and say: "The wiki is too small to reorganize meaningfully (fewer than 5 content pages). Add more pages first."
+
+    ## Step 2 -- Read AGENTS.md
+
+    Run `wiki read AGENTS.md` and internalize the wiki's contribution rules (naming conventions, writing style, protected paths). These rules apply to every write, move, and index page this command creates.
+
+    Note: `AGENTS.md` is protected and cannot be moved or deleted. Hidden internal index files are also protected. Do not attempt to move these.
+
+    ## Step 3 -- Survey the current structure
+
+    Collect a full picture of the wiki:
+
+    1. Run `wiki tree` at full depth to see the existing folder hierarchy.
+    2. For each page returned by `wiki list` (excluding `AGENTS.md` and hidden files), run `wiki read <page>` with `maxLines: 30` to capture its front-matter (`title`, `description`, `tags`) and opening paragraph. For wikis with more than 30 pages, read every index.md and a representative sample of content pages (at least one per existing folder).
+    3. Run `wiki lint` and note any broken links, orphans, or missing front-matter.
+
+    ## Step 4 -- Analyze and design the new structure
+
+    Using the page metadata and content gathered in Step 3, group pages into coherent topics and design a new folder layout. Apply these principles:
+
+    **Grouping rules:**
+    - Create a sub-folder only when there are **at least 3 closely related pages** with a clear shared topic. A single orphan page does not justify a new folder.
+    - Maximum folder depth is 3 levels (root / section / sub-section). Do not go deeper.
+    - Pages that cross multiple topics stay at the root or in the closest parent folder.
+    - For wikis with **fewer than 15 content pages**, prefer a flat structure. Only create sub-folders if groupings are obvious and improve navigation significantly; otherwise report that the current structure is already appropriate and exit.
+
+    **Naming rules:**
+    - Folder names use lowercase kebab-case (e.g. `api-reference/`, `how-to-guides/`).
+    - Do not rename page files purely for style (case or hyphen changes). The move cost exceeds the benefit unless the current name is genuinely misleading.
+    - Do not merge pages. Do not delete pages. Do not edit page bodies. Content is preserved exactly as-is.
+
+    **What stays unchanged:**
+    - `AGENTS.md` -- always stays at root, never moves.
+    - Any page marked `superseded_by` in its front-matter -- leave it in place.
+
+    **Produce:**
+    - A new folder tree diagram showing where every page ends up.
+    - An explicit move table: `from` -> `to` for each page being relocated.
+    - A list of new `index.md` files to create (one per new folder that doesn't already have one).
+    - Any existing `index.md` files that need updating because their listed child pages are moving.
+
+    If the current structure is already well-organized and no meaningful moves can be identified, say so clearly and exit without making any changes.
+
+    ## Step 5 -- Present the plan and ask for approval
+
+    Display the complete reorganization plan using `showMessage`:
+
+    ```
+    ## Wiki Reorganization Plan
+
+    ### New structure
+    <tree diagram>
+
+    ### Pages to move (<N> total)
+    | From | To |
+    |------|-----|
+    | old/path.md | new/section/path.md |
+    ...
+
+    ### New index pages to create
+    - new/section/index.md
+    ...
+
+    ### Existing index pages to update
+    - index.md (top-level navigation)
+    ...
+
+    ### Leave redirect stubs at old paths?
+    Redirect stubs leave a short "page moved to X" page at every old location so
+    that any external links or bookmarks still resolve. Recommended when the wiki
+    is shared with others.
+    ```
+
+    Then ask the user to choose using `userInput` (or `AskUserQuestion` if unavailable) with options:
+    - **proceed with redirects** -- execute all moves, leave stub pages at the old paths
+    - **proceed without redirects** -- execute all moves, delete old paths entirely
+    - **edit** -- ask what to change, revise the plan, and re-confirm
+    - **cancel** -- abort without making any changes
+
+    Do not proceed until the user explicitly approves.
+
+    ## Step 6 -- Execute the moves
+
+    For each page in the approved move table, in order from most-nested to least-nested (deepest paths first to avoid path conflicts):
+
+    Run `wiki move` with:
+    - `path`: the current page path
+    - `to`: the new page path
+    - `leaveRedirect`: `true` if the user chose "proceed with redirects", `false` otherwise
+    - `overwrite`: `false` (never silently overwrite an existing page; if a conflict is detected, stop and report it)
+
+    After each move, note the result. If any move fails, stop immediately and report which move failed and why, then list remaining unexecuted moves so the user can decide how to continue.
+
+    Do not manually rewrite links in any page body. The `wiki move` operation already repairs all internal links automatically.
+
+    ## Step 7 -- Create and update index pages
+
+    For each **new folder** identified in the plan:
+
+    Run `wiki write` to create `<new-folder>/index.md` with:
+    - Front-matter: `title` (human-readable section title), `description` (one sentence about the section's scope), `updated` (today's date)
+    - Body: a short paragraph describing the section, followed by a `## Pages` section listing all pages in the folder as markdown links
+
+    For each **existing index page** that needs updating (because its children moved):
+
+    Run `wiki read` to get the current content, then run `wiki write` to update only the navigation links. Preserve all other content in the index page exactly as written.
+
+    Finally, update the top-level `index.md`:
+
+    Run `wiki read index.md`, then run `wiki write index.md` to add any new sections created during this reorganization. Preserve all existing content and only add or update the navigation structure.
+
+    ## Step 8 -- Verify and report
+
+    Run `wiki lint` and compare the results with the pre-reorganization lint output from Step 3.
+
+    Report:
+    - How many pages were moved
+    - How many index pages were created or updated
+    - Whether redirect stubs were left at old paths
+    - Any lint issues that existed before and are now resolved
+    - Any new lint issues introduced (broken links, orphans, missing front-matter)
+
+    If new lint issues exist, investigate and fix them before declaring the reorganization complete.
+
+    Finish with a summary message:
+
+    ```
+    Wiki reorganization complete.
+      Pages moved:          N
+      Redirect stubs left:  N (or "none")
+      Index pages created:  N
+      Index pages updated:  N
+      Remaining lint issues: N (was M before)
+    ```
+
 # ---------------
 - name: translate
   title: "/translate"
