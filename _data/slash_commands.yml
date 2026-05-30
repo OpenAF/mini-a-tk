@@ -66,14 +66,20 @@
     }
     ```
 
-    If `userInput` is **not** available, use `AskUserQuestion` to ask:
-    > "Commit with the message above? Reply **yes**, **edit**, or **cancel**."
+    If `userInput` is **not** available, use the `question` tool with this payload (do not send a top-level `prompt`):
 
-    If neither tool is available, ask as plain text and wait for the reply.
+    ```json
+    {
+      "questions": [{ "question": "Commit with the message above?", "options": ["yes", "edit", "cancel"] }]
+    }
+    ```
+
+    If `question` is unavailable, use `AskUserQuestion` with equivalent choices.
+    If none of those tools is available, ask in plain text and wait for the reply.
 
     - **yes** — commit using the message
     - **edit** — ask the user for a revised message (via `userInput` or `AskUserQuestion`), then commit with the new version
-    - **cancel** — abort and do nothing
+    - **cancel** — abort immediately, do nothing, and stop without any further output or actions
 
     ## Step 6 — Commit and confirm
 
@@ -82,11 +88,9 @@
     - No body: `git commit -m "<subject>"`
     - With body: `git commit -m "<subject>" -m "<body>"`
 
-    After a successful commit, run `git log -1 --oneline` and show the result.
+    After a successful commit, run `git log -1 --oneline` and use `showMessage` to display the result including a reminder to `git push`.
 
-    Remind the user to `git push` if they want to share their changes.
-
-    Notes: 'echo' commands are not visible to the user, so use `showMessage` or `userInput` to communicate important information.
+    Once `showMessage` is called, the task is **complete**. Do not run any further commands or verification steps.
 
 # -------------
 - name: explain
@@ -254,11 +258,21 @@
     is shared with others.
     ```
 
-    Then ask the user to choose using `userInput` (or `AskUserQuestion` if unavailable) with options:
-    - **proceed with redirects** -- execute all moves, leave stub pages at the old paths
-    - **proceed without redirects** -- execute all moves, delete old paths entirely
-    - **edit** -- ask what to change, revise the plan, and re-confirm
-    - **cancel** -- abort without making any changes
+    Then ask the user to choose using `userInput`. If `userInput` is unavailable, use `question` with:
+
+    ```json
+    {
+      "questions": [{ "question": "Proceed with the wiki reorganization?", "options": ["proceed with redirects", "proceed without redirects", "edit", "cancel"] }]
+    }
+    ```
+
+    If `question` is unavailable, use `AskUserQuestion` with equivalent choices.
+
+    Options:
+    - **proceed with redirects** — execute all moves, leave stub pages at the old paths
+    - **proceed without redirects** — execute all moves, delete old paths entirely
+    - **edit** — ask what to change, revise the plan, and re-confirm
+    - **cancel** — abort without making any changes
 
     Do not proceed until the user explicitly approves.
 
@@ -436,7 +450,7 @@
     tags: [git, risk analysis, code review]
     ---
 
-    Perform a git impact and risk analysis for the current repository. Follow these steps:
+    Perform a git impact and risk analysis for the current path repository. Follow these steps:
 
     ## Step 1 — Gather git context
 
@@ -487,6 +501,7 @@
     - Any missing tests or risky patterns spotted in the diffs
 
     Use **bold** for high-risk items. Keep the tone factual and actionable.
+    Use emoticons as appropriate to highlight risk levels (e.g. 🔴 for high, 🟠 for medium, 🟢 for low) among other useful formatting to enhance readability.
 
 # -----------------------
 - name       : new-command
@@ -505,7 +520,7 @@
 
     ## Step 1 — Gather command details
 
-    Use the `userInput` tool to collect the required information. If `userInput` is unavailable, ask via `AskUserQuestion` or plain text and wait for replies.
+    Use the `userInput` tool to collect the required information. If `userInput` is unavailable, use the `question` tool with a `questions` array payload (not a top-level `prompt`), `AskUserQuestion`, or plain text and wait for replies.
 
     Ask for the following:
 
@@ -532,20 +547,53 @@
 
     <clear imperative prose; use bullet lists for sub-steps, code blocks for commands>
 
+    ## Step 2 — <next action>
+
+    ...
+
     ## Step N — <final action>
 
     <how to confirm or present the result to the user>
     ```
 
+    Rules for drafting:
+    - Use numbered `## Step N` sections for distinct phases; combine trivial sub-steps into bullets within a section rather than making every sub-step its own section.
+    - Write instructions as imperative prose directed at the agent ("Run …", "Ask the user …", "Write …").
+    - Include concrete examples (shell commands, JSON snippets, expected outputs) wherever they reduce ambiguity.
+    - Use `showMessage` or `userInput` (not `echo`) when the command needs to surface information or ask a question at runtime.
+    - Omit the `tags` line from the front-matter if no tags were provided.
+
     ## Step 3 — Preview and confirm
 
     Display the full generated file content using `showMessage` (or plain text if unavailable).
 
-    Ask the user to choose: **save**, **edit**, or **cancel**.
+    Then ask the user to choose (via `userInput` with `operation: choose` and options `["save", "edit", "cancel"]`; if unavailable, use `question` with:
+
+    ```json
+    {
+      "questions": [{ "question": "<your prompt>", "options": ["save", "edit", "cancel"] }]
+    }
+    ```
+
+    or `AskUserQuestion`):
+
+    - **save** — write the file as shown
+    - **edit** — ask what to change, revise the draft, and re-confirm
+    - **cancel** — abort without writing
 
     ## Step 4 — Write the file
 
-    Write the confirmed content to the output path. Confirm with the full path.
+    Determine the output path:
+    - If the user provided a path, use it.
+    - Otherwise, resolve the `commands/` directory relative to the location of this command file and write `<name>.md` there.
+
+    Write the confirmed content to the output path using the `writeFile` tool (or the shell if `writeFile` is unavailable).
+
+    After a successful write, confirm with the full path and remind the user that the command is immediately available as:
+
+    ```
+    mini-a goal="/new-command-name ..."
+    ```
 
 # -----------------------
 - name       : new-hook
@@ -566,19 +614,32 @@
 
     ## Step 1 — Gather hook details
 
-    Use the `userInput` tool to collect the required information. Ask for:
+    Use the `userInput` tool to collect the required information. If `userInput` is unavailable, use the `question` tool with a `questions` array payload (not a top-level `prompt`), `AskUserQuestion`, or plain text and wait for replies.
 
-    1. **Hook name** — a short kebab-case identifier (e.g. `cost-tracker`, `log-shell`).
-    2. **Event** — one of: `before_goal`, `after_goal`, `before_shell`, `after_shell`, `before_tool`, `after_tool`.
-    3. **Command** — the shell command(s) to run.
-    4. **Inject output?** *(optional, default: false)* — if `true`, stdout is injected into the agent's context.
-    5. **Timeout** *(optional)* — max run time in milliseconds.
-    6. **Fail blocks?** *(optional, default: true)* — set `false` for logging/observability hooks.
-    7. **Start enabled or disabled?** — `.yaml` (enabled) or `.yaml.disabled` (disabled).
+    Ask for the following:
+
+    1. **Hook name** — a short kebab-case identifier (e.g. `cost-tracker`, `log-shell`). Used as the filename.
+    2. **Event** — the lifecycle event that triggers this hook. Available events:
+
+       | Event          | When it fires                                      |
+       |----------------|----------------------------------------------------|
+       | `before_goal`  | Before the agent starts processing the goal        |
+       | `after_goal`   | After the agent produces its final answer          |
+       | `before_shell` | Before any shell command is executed               |
+       | `after_shell`  | After a shell command completes                    |
+       | `before_tool`  | Before any tool call is made                       |
+       | `after_tool`   | After any tool call completes                      |
+
+    3. **Command** — the shell command(s) to run. May be a single line or a multiline block.
+    4. **Inject output?** *(optional, default: false)* — if `true`, the hook's stdout is injected back into the agent's context. Useful for `before_*` hooks that need to supply information.
+    5. **Timeout** *(optional)* — maximum run time in milliseconds (e.g. `2000`). Omit to use the default.
+    6. **Fail blocks?** *(optional, default: true)* — if `false`, a non-zero exit code from the hook is ignored and execution continues. Set to `false` for logging/observability hooks.
+    7. **Start enabled or disabled?** — whether to write the file as `.yaml` (enabled) or `.yaml.disabled` (disabled, safe default for new hooks).
+    8. **Output path** *(optional)* — where to save the file. Default: the `hooks/` directory relative to this command file.
 
     ## Step 2 — Draft the hook file
 
-    Compose the hook YAML:
+    Compose the hook YAML using the information collected:
 
     ```yaml
     event: <event>
@@ -586,16 +647,49 @@
       <shell command(s)>
     # injectOutput: true      ← include only if true
     # timeout: 2000           ← include only if provided
-    # failBlocks: false       ← include only if false
+    # failBlocks: false       ← include only if false (default is true)
     ```
+
+    Rules:
+    - Include `injectOutput` only when the user set it to `true`.
+    - Include `timeout` only when the user provided a value.
+    - Include `failBlocks` only when the user set it to `false`.
+    - Use a literal block scalar (`|`) for multiline commands; use a folded scalar (`>`) for a single long line.
+    - Available environment variables in hook commands:
+      - `$MINI_A_TOOL_NAME` — name of the tool just called (after_tool)
+      - `$MINI_A_TOKENS_IN` — input token count for the last model call
+      - `$MINI_A_TOKENS_OUT` — output token count for the last model call
 
     ## Step 3 — Preview and confirm
 
-    Display the full generated file content and ask the user to choose: **save**, **edit**, or **cancel**.
+    Display the full generated file content using `showMessage` (or plain text if unavailable).
+
+    Ask the user to choose (via `userInput` with `operation: choose` and options `["save", "edit", "cancel"]`; if unavailable, use `question` with:
+
+    ```json
+    {
+      "questions": [{ "question": "<your prompt>", "options": ["save", "edit", "cancel"] }]
+    }
+    ```
+
+    or `AskUserQuestion`):
+
+    - **save** — write the file as shown
+    - **edit** — ask what to change, revise the draft, and re-confirm
+    - **cancel** — abort without writing
 
     ## Step 4 — Write the file
 
-    Write to `<name>.yaml` or `<name>.yaml.disabled` in the `hooks/` directory. Confirm the path.
+    Determine the output path:
+    - If the user provided a path, use it.
+    - Otherwise, resolve the `hooks/` directory relative to this command file.
+    - Append the filename: `<name>.yaml` if enabled, or `<name>.yaml.disabled` if starting disabled.
+
+    Write the confirmed content using the `writeFile` tool (or the shell if `writeFile` is unavailable).
+
+    After a successful write, confirm with the full path and note:
+    - If saved as `.yaml.disabled`: _"Hook is currently disabled. Rename to `<name>.yaml` to activate it."_
+    - If saved as `.yaml`: _"Hook is active immediately."_
 
 # -----------------------
 - name       : new-skill
@@ -612,52 +706,102 @@
 
     Create a new mini-a skill based on the user's instructions.
 
-    Skills are reusable specialist prompts stored as `skills/<name>/SKILL.md`. When loaded, the skill's body replaces or extends the agent's system prompt, turning it into a focused expert.
+    Skills are reusable specialist prompts stored as `skills/<name>/SKILL.md`. When loaded, the skill's body replaces or extends the agent's system prompt, turning it into a focused expert. Skills can restrict which tools the agent may use via `allowed-tools`.
 
     ## Step 1 — Gather skill details
 
-    Use the `userInput` tool to collect the required information. Ask for:
+    Use the `userInput` tool to collect the required information. If `userInput` is unavailable, use the `question` tool with a `questions` array payload (not a top-level `prompt`), `AskUserQuestion`, or plain text and wait for replies.
 
-    1. **Skill name** — a short kebab-case identifier (e.g. `code-reviewer`, `sql-expert`).
+    Ask for the following:
+
+    1. **Skill name** — a short kebab-case identifier (e.g. `code-reviewer`, `sql-expert`). Used as the directory name and the `name` field.
     2. **Version** — initial version string (default: `1.0.0`).
-    3. **Description** — 1–5 sentences describing what the skill does and when to use it.
-    4. **Allowed tools** *(optional)* — comma-separated list (e.g. `Read, Write, Bash`). Leave blank to allow all.
-    5. **Skill instructions** — what the agent should do, rules, examples, output format.
+    3. **Description** — a concise paragraph (1–5 sentences) describing:
+       - What the skill does
+       - When to use it
+       - What patterns or tasks it handles
+    4. **Allowed tools** *(optional)* — comma-separated list of tools the agent may use when this skill is active. Common values:
+       - `Read`, `Write`, `Edit`, `Grep`, `Glob` — file operations
+       - `Bash` — shell execution
+       - `AskUserQuestion` — interactive prompts
+       - `WebSearch`, `WebFetch` — web access
+       - Leave blank to allow all tools (no restriction).
+    5. **Skill instructions** — the full body: what the agent should do, how it should reason, rules it must follow, examples, output format, etc. May be rough notes; the agent will structure them into clear markdown sections.
+    6. **Output path** *(optional)* — parent directory for the skill folder. Default: the `skills/` directory relative to this command file.
 
     ## Step 2 — Draft the skill file
 
-    Compose `SKILL.md`:
+    Compose `SKILL.md` using the information collected:
 
     ```
     ---
     name: <name>
     version: <version>
     description: |
-      <description>
+      <description paragraph(s)>
     allowed-tools:
       - Read
-      # ... (omit section if no restriction)
+      - Write
+      # ... (omit section entirely if no tool restriction was requested)
     ---
 
     # <Skill Title>
 
+    <Brief one-sentence summary of the skill's purpose.>
+
     ## Your Task
+
+    <Clear imperative description of what the agent should do when this skill is active.>
+
+    ## <Section per major behaviour, rule set, or domain area>
+
+    <Structured guidance, examples, before/after pairs, reference tables, etc.>
 
     ## Process
 
     1. <Step 1>
+    2. <Step 2>
     ...
 
     ## Output Format
+
+    <Describe the expected output structure, format, or length.>
     ```
+
+    Rules for drafting:
+    - Omit `allowed-tools` from the front-matter entirely if the user did not specify a tool restriction.
+    - Use numbered `## Process` steps for sequential workflows; use reference tables or before/after examples where they reduce ambiguity.
+    - Write the body as instructions directed at the agent ("When given...", "Identify...", "Rewrite...").
+    - Be specific: include concrete examples, anti-patterns to avoid, and edge cases to handle.
 
     ## Step 3 — Preview and confirm
 
-    Display the full generated file content and ask the user to choose: **save**, **edit**, or **cancel**.
+    Display the full generated file content using `showMessage` (or plain text if unavailable).
+
+    Ask the user to choose (via `userInput` with `operation: choose` and options `["save", "edit", "cancel"]`; if unavailable, use `question` with:
+
+    ```json
+    {
+      "questions": [{ "question": "<your prompt>", "options": ["save", "edit", "cancel"] }]
+    }
+    ```
+
+    or `AskUserQuestion`):
+
+    - **save** — write the file as shown
+    - **edit** — ask what to change, revise the draft, and re-confirm
+    - **cancel** — abort without writing
 
     ## Step 4 — Write the file
 
-    Create `skills/<name>/SKILL.md`. Confirm with the full path and remind the user:
+    Determine the output path:
+    - If the user provided a path, use it as the parent directory.
+    - Otherwise, use the `skills/` directory relative to this command file.
+    - Create the subdirectory `<name>/` and write the file as `SKILL.md` inside it.
+
+    Write the confirmed content using the `writeFile` tool (or the shell if `writeFile` is unavailable).
+
+    After a successful write, confirm with the full path and remind the user how to activate the skill:
 
     ```
     mini-a skill=<name> goal="your task here"
@@ -678,50 +822,122 @@
 
     Create a new mini-a agent file based on the user's instructions.
 
-    Agent files are Markdown files with a YAML front-matter block that configures identity, model, capabilities, MCP tools, constraints, knowledge, and persona.
+    Agent files are Markdown files with a YAML front-matter block that configures identity, model, capabilities, MCP tools, constraints, knowledge, and persona. The body below the closing `---` is the default goal run when none is supplied on the command line.
 
     ## Step 1 — Gather agent details
 
-    Use the `userInput` tool to collect the required information. Ask for:
+    Use the `userInput` tool to collect the required information. If `userInput` is unavailable, use the `question` tool with a `questions` array payload (not a top-level `prompt`), `AskUserQuestion`, or plain text and wait for replies.
+
+    Ask for the following:
 
     1. **Name** — a short kebab-case identifier (e.g. `code-reviewer`, `daily-standup`).
     2. **Description** — one sentence explaining what the agent does.
-    3. **Default goal** — the task the agent performs when invoked without an explicit `goal=`.
-    4. **Capabilities** — which to enable (default: `useutils` + `usetools`): `useshell`, `readwrite`.
-    5. **MCP tools** *(optional)* — MCP connections to expose (`ojob`, `sse`, `remote`, `stdio`).
-    6. **Constraints** *(optional)* — behavioural rules appended to the system prompt.
-    7. **Knowledge** *(optional)* — domain-specific background text injected at session start.
-    8. **Persona / youare** *(optional)* — replaces the default "You are a helpful assistant" opener.
-    9. **Model** *(optional)* — override `OAF_MODEL` for this agent.
+    3. **Default goal** — the task the agent performs when invoked without an explicit `goal=`. May be rough; the agent will write it as clear imperative prose.
+    4. **Capabilities** — which to enable (default: `useutils` + `usetools`):
+
+       | Capability  | What it enables                                        |
+       |-------------|--------------------------------------------------------|
+       | `useutils`  | File ops, math, time, user-input tool (mini-a-utils.js)|
+       | `usetools`  | Registers the MCP tools listed in `tools:`             |
+       | `useshell`  | POSIX shell execution (disabled by default for safety) |
+       | `readwrite` | File read+write via shell (requires `useshell`)        |
+
+    5. **MCP tools** *(optional)* — MCP connections to expose. For each, collect the type and options:
+
+       | Type     | Required fields                          |
+       |----------|------------------------------------------|
+       | `ojob`   | `job:` path to the ojob YAML             |
+       | `sse`    | `url:` SSE endpoint                      |
+       | `remote` | `url:` streamable HTTP endpoint          |
+       | `stdio`  | `cmd:` inline process command            |
+
+       If none provided, include the default `mcp-time.yaml` entry commented out.
+
+    6. **Constraints** *(optional)* — behavioural rules appended to the system prompt (e.g. "Answer in JSON without markdown code blocks."). Default if none given: two standard rules about tool-grounded answers and transparency about missing information.
+    7. **Knowledge** *(optional)* — domain-specific background text injected at session start. May be a literal string or a file path to load (prefix with `@`, e.g. `@docs/context.md`).
+    8. **Persona / youare** *(optional)* — replaces the default "You are a helpful assistant" system-prompt opener.
+    9. **Model** *(optional)* — override the `OAF_MODEL` env var for this agent (e.g. `(type: openai, model: gpt-4o, key: 'sk-...')`). Leave blank to inherit from the environment.
+    10. **Output path** *(optional)* — where to save the file. Default: current working directory as `<name>.md`.
 
     ## Step 2 — Draft the agent file
 
+    Compose the agent file following the standard mini-a agent template:
+
     ```
     ---
+    # ── Identity ────────────────────────────────────────────────────────────────
     name        : <name>
     description : <description>
+
+    # ── Model ───────────────────────────────────────────────────────────────────
+    # Override the OAF_MODEL env-var for this agent.
+    #model       : "(type: openai, model: gpt-4o, key: 'sk-...')"
+
+    # ── Capabilities ────────────────────────────────────────────────────────────
     capabilities:
       - useutils
       - usetools
+      # - useshell
+      # - readwrite
+
+    # ── MCP Tools ───────────────────────────────────────────────────────────────
     tools:
       - type   : ojob
         options:
           job  : mcps/mcp-time.yaml
+
+    # ── Constraints ─────────────────────────────────────────────────────────────
     constraints:
       - Prefer tool-grounded answers over assumptions.
       - Be explicit when information is missing or uncertain.
+
+    # ── Domain Knowledge ────────────────────────────────────────────────────────
+    #knowledge   : |
+    #  Add domain-specific background here.
+
+    # ── Persona ──────────────────────────────────────────────────────────────────
+    #youare      : |
+    #  You are a specialized AI agent focused on <domain>.
     ---
 
     <default goal>
     ```
 
+    Rules:
+    - Uncomment `useshell` and/or `readwrite` only if the user requested them; otherwise leave them commented.
+    - Uncomment `model` only if the user provided a value.
+    - Populate `tools:` with the user's MCP entries. If none were given, comment out the entire `tools:` block (including the default `mcp-time.yaml` entry).
+    - Populate `constraints:` with the user's rules. If none were given, use the two standard defaults shown above.
+    - Uncomment `knowledge` and `youare` only when the user provided values; otherwise leave them commented.
+    - The body below the closing `---` must be the user's default goal, written as clear imperative prose.
+
     ## Step 3 — Preview and confirm
 
-    Display the full generated file content and ask the user to choose: **save**, **edit**, or **cancel**.
+    Display the full generated file content using `showMessage` (or plain text if unavailable).
+
+    Ask the user to choose (via `userInput` with `operation: choose` and options `["save", "edit", "cancel"]`; if unavailable, use `question` with:
+
+    ```json
+    {
+      "questions": [{ "question": "<your prompt>", "options": ["save", "edit", "cancel"] }]
+    }
+    ```
+
+    or `AskUserQuestion`):
+
+    - **save** — write the file as shown
+    - **edit** — ask what to change, revise the draft, and re-confirm
+    - **cancel** — abort without writing
 
     ## Step 4 — Write the file
 
-    Write `<name>.md` to the output path. Confirm with the full path and remind the user:
+    Determine the output path:
+    - If the user provided a path, use it.
+    - Otherwise write `<name>.md` in the current working directory.
+
+    Write the confirmed content using the `writeFile` tool (or the shell if `writeFile` is unavailable).
+
+    After a successful write, confirm with the full path and remind the user how to run it:
 
     ```
     mini-a agent=<filename>
@@ -1190,4 +1406,940 @@
       - `/wiki-sync-path /Users/nunoaguiar/Documents/git/mini-a`
 
     Run `mini-a --command` to confirm how to pass command arguments in your current setup.
+
+# -----------------------
+- name       : cheatsheet
+  title      : "/cheatsheet"
+  description: "Generate a concise mini-a cheatsheet for a specific topic by filtering the output of `mini-a --cheatsheet`."
+  tags       : [mini-a, help, cheatsheet, docs]
+  usage      : "/cheatsheet [topic]"
+  code       : |
+    ---
+    name: cheatsheet
+    description: Generate a concise mini-a cheatsheet for a specific topic by filtering the output of `mini-a --cheatsheet`.
+    tags: [mini-a, help, cheatsheet, docs]
+    ---
+
+    Generate a focused mini-a cheatsheet for the requested topic.
+
+    Topic: `{{arg1}}`
+    Raw args: `{{args}}`
+
+    ## Step 1 — Gather the source material
+
+    Prefer using the `markdownFiles` tool to inspect the mini-a documentation before using shell commands.
+
+    Use it in this order:
+    1. `list` — discover which mini-a documentation files are available
+    2. `search` — look for the requested topic across the docs
+    3. `read` — open only the most relevant files or sections
+
+    Treat the retrieved documentation as markdown source material.
+
+    If `markdownFiles` is unavailable, fails, or does not produce enough relevant material:
+    - Fall back to running `mini-a --cheatsheet`
+    - Treat the result as markdown source material
+
+    If both the docs tool and `mini-a --cheatsheet` fail or are unavailable:
+    - State that live mini-a documentation could not be retrieved.
+    - Include the error briefly.
+    - Stop instead of guessing from memory.
+
+    ## Step 2 — Resolve the target topic
+
+    Interpret `{{args}}` as the requested topic.
+
+    Rules:
+    - If no topic was provided, return a short top-level cheatsheet summary of the most important mini-a areas.
+    - Prefer exact matches against command-line parameter names, markdown headings about parameters, option values, environment variables, and example commands.
+    - If there is no exact match, use fuzzy matching and synonyms.
+    - If multiple interpretations are plausible, choose the best one and list up to 3 close alternatives.
+
+    Examples of topic forms:
+    - `agents`
+    - `hooks`
+    - `commands`
+    - `skills`
+    - `shell`
+    - `tools`
+    - `extracommands`
+    - `--model`
+
+    ## Step 3 — Extract relevant content
+
+    From the retrieved mini-a documentation or fallback cheatsheet, extract the sections most relevant to the topic.
+
+    Prioritize, in this order:
+    1. Section headings and their content
+    2. Command-line parameters and flags
+    3. Possible values for those parameters
+    4. Environment variables
+    5. Examples and usage snippets
+    6. Nearby explanatory text
+
+    Extraction rules:
+    - Prefer full markdown sections over isolated matching lines.
+    - Focus on content that explains mini-a command line parameters, their accepted values, defaults, and behavior.
+    - When a topic refers to a feature area, extract the parameters that enable, configure, or constrain that area.
+    - Include nearby examples when they clarify usage.
+    - Ignore unrelated sections even if they contain the topic as a casual mention.
+    - If the source is large, keep only the most relevant 2 to 4 sections.
+
+    ## Step 4 — Build the focused cheatsheet
+
+    Rewrite the extracted material into a concise markdown cheatsheet with this structure:
+
+    ### mini-a cheatsheet: `<topic>`
+
+    **What it is**
+    <1 to 3 short sentences>
+
+    **Relevant command line parameters**
+
+    | Parameter | Possible values | Description |
+    |---|---|---|
+    | `<parameter>` | `<value list, range, enum, or default>` | `<short description>` |
+
+    **Examples**
+
+    | Example | Purpose |
+    |---|---|
+    | `mini-a ...` | `<what this example demonstrates>` |
+
+    **Related topics**
+
+    | Topic | Why it is related |
+    |---|---|
+    | `<topic>` | `<short reason>` |
+
+    Formatting rules:
+    - Prefer markdown tables whenever the content is list-shaped.
+    - The main table SHOULD focus on mini-a command line parameters, their possible values, and their descriptions.
+    - Prefer parameter names exactly as documented, such as `--flag`, `param=value`, or other CLI forms used by mini-a.
+    - Include defaults, enums, ranges, or example values in the **Possible values** column whenever the source provides them.
+    - If the requested topic is broader than a single parameter, populate the main table with the parameters most relevant to that topic.
+    - Do not use commands, headings, or related topics as substitutes in the main table unless they are directly part of parameter usage.
+    - Use the **Examples** table instead of a plain code block when you can pair each example with a short purpose.
+    - Keep example commands exact and copy-pasteable.
+    - Preserve exact parameter names, command names, and environment variable names from the source.
+    - Rewrite descriptions for clarity, but do not invent capabilities that are not present in the source cheatsheet.
+    - Prefer examples and wording taken from the mini-a docs when available; use the fallback cheatsheet only when needed.
+    - If no topic was provided, rename the heading to `mini-a cheatsheet: overview`.
+    - Only fall back to bullets or a code block if table output would become awkward or materially less readable.
+
+    ## Step 5 — Handle weak matches
+
+    If the topic is weakly matched or not found:
+    - Say that no strong cheatsheet section was found for the requested topic.
+    - Present up to 5 closest matching topics, headings, or options from the source cheatsheet in a markdown table.
+    - Use the columns `Candidate` | `Type` | `Why it matches`.
+    - Include a one-line suggestion for how the user could retry.
+
+    ## Step 6 — Present the result
+
+    Return only the focused cheatsheet in markdown.
+
+    Do not dump the full raw output of `mini-a --cheatsheet` unless the user explicitly asks for it.
+
+# -----------------------
+- name       : git-prs
+  title      : "/git-prs"
+  description: "Analyze pull requests of the current git repo and build a table of the merge impact into main in terms of functionality and possible breaking impact."
+  tags       : [git, github, pr, analysis]
+  usage      : "/git-prs [PR numbers or filter]"
+  code       : |
+    ---
+    name: Analyze pull requests
+    description: Analyze pull requests {{args}} of the current git repo on the current folder and build me a table of the merge impact into main in terms of functionality and possible breaking impact.
+    ---
+
+    Analyze pull requests {{args}} of the current git repo on the current folder and build me a table of the merge impact into main in terms of functionality and possible breaking impact
+
+# -----------------------
+- name       : git-review
+  title      : "/git-review"
+  description: "Review the current repository changes against the default base branch and produce prioritized, actionable code-review findings."
+  tags       : [git, review, code-review]
+  usage      : "/git-review"
+  code       : |
+    ---
+    name: Git Review
+    description: Review the current repository changes against the default base branch and produce prioritized, actionable code-review findings.
+    tags: [git, review, code review]
+    ---
+
+    Review the current git changes in the current folder against the repository default branch (`main` or `master`) and produce a proper code review.
+
+    This is a **review**, not a change summary. Prioritize bugs, regressions, correctness issues, unsafe assumptions, missing validation, contract breaks, and missing tests.
+
+    ## Step 1 — Detect git context
+
+    Run the following commands:
+
+    - `git rev-parse --is-inside-work-tree` — verify the current folder is a git repository
+    - `git rev-parse --abbrev-ref HEAD` — current branch name
+    - `git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'` — detect the default remote branch; fallback to `git branch --list main master`
+    - `git status --short` — detect local uncommitted changes
+    - `git merge-base HEAD <default-branch>` — find the comparison base
+
+    If the current folder is not a git repository, stop and say so clearly.
+
+    ## Step 2 — Gather the review material
+
+    Collect both branch-level and local-uncommitted context so the review covers everything visible in the working tree:
+
+    - `git log --oneline $(git merge-base HEAD <default-branch>)..HEAD` — commits in the current branch
+    - `git diff --stat $(git merge-base HEAD <default-branch>)..HEAD` — branch diff summary
+    - `git diff $(git merge-base HEAD <default-branch>)..HEAD` — full branch diff
+    - `git diff --stat HEAD` — uncommitted diff summary
+    - `git diff HEAD` — full uncommitted diff
+
+    If the diff is large, inspect the full set of changed files and then drill into the most important files individually with:
+
+    - `git diff $(git merge-base HEAD <default-branch>)..HEAD -- <file>`
+    - `git diff HEAD -- <file>`
+
+    Do not review from stats alone. Read enough of the actual diff to support each finding.
+
+    ## Step 3 — Review with a code-review mindset
+
+    Look specifically for:
+
+    - **Correctness bugs** — broken logic, wrong conditions, off-by-one errors, incorrect defaults
+    - **Behaviour regressions** — changed semantics, missing edge-case handling, altered user-visible behaviour
+    - **Contract / API issues** — signature changes, response-shape changes, schema mismatches, backward compatibility risks
+    - **Data and state risks** — migrations, persistence, cache invalidation, concurrency, idempotency
+    - **Security / safety issues** — auth gaps, secret exposure, injection risks, unsafe shelling out, trust-boundary mistakes
+    - **Operational risks** — config drift, CI/build breakage, dependency issues, rollout hazards
+    - **Test gaps** — risky logic changed without adequate tests, outdated assertions, missing regression coverage
+
+    Increase scrutiny for:
+
+    - shared utilities
+    - public interfaces
+    - configuration and workflow files
+    - data model or schema changes
+    - files with broad blast radius
+
+    ## Step 4 — Decide what is actually a finding
+
+    Only report an item as a finding when all of the following are true:
+
+    1. There is a plausible defect, regression, or meaningful risk.
+    2. The concern is grounded in the diff or nearby code, not guesswork.
+    3. The issue is actionable for the author.
+
+    Avoid low-value comments such as pure style nitpicks, speculative refactors, or generic "add more tests" remarks without naming the missing scenario.
+
+    When useful, include:
+
+    - the concrete scenario that breaks
+    - why the current change causes it
+    - the likely impact
+    - the missing test that would catch it
+
+    ## Step 5 — Output format
+
+    Present findings first, ordered by severity.
+
+    Use this structure:
+
+    ### Findings
+
+    - **High** — `[path/to/file.ext:line]` Brief title
+      Explain the defect or regression clearly, including the failure mode and impact.
+
+    - **Medium** — `[path/to/file.ext:line]` Brief title
+      Explain the risk and why it matters.
+
+    - **Low** — `[path/to/file.ext:line]` Brief title
+      Explain the issue briefly.
+
+    ### Open questions
+
+    - List only genuine uncertainties that affect review confidence.
+
+    ### Summary
+
+    - Give a short overall assessment of merge readiness.
+    - Mention notable testing gaps or residual risk.
+
+    ## Review rules
+
+    - Prefer precise file/line references for every finding.
+    - Quote only short snippets when needed.
+    - Keep the tone factual and direct.
+    - If there are **no findings**, say explicitly: `No findings.`
+    - If there are no findings, still mention any residual review limits such as very large diffs, generated files, or areas not deeply inspected.
+
+# -----------------------
+- name       : git-qa
+  title      : "/git-qa"
+  description: "Generate a structured QA test plan covering all changes in the current branch (local uncommitted + committed) compared with the main/master branch."
+  tags       : [git, testing, qa]
+  usage      : "/git-qa"
+  code       : |
+    ---
+    name: Git QA Test Plan Generator
+    description: Generate a structured QA test plan covering all changes in the current branch (local uncommitted + committed) compared with the main/master branch.
+    ---
+
+    Generate a structured QA test plan covering all changes in the current branch (local uncommitted + committed) compared with the main/master branch.
+
+    ## Step 1 — Detect git context
+
+    Run the following commands:
+
+    - `git rev-parse --abbrev-ref HEAD` — current branch name
+    - `git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'` — detect default remote branch (`main` or `master`); fallback to checking locally via `git branch --list main master`
+    - `git status --short` — local uncommitted changes (staged + unstaged)
+    - `git log --oneline $(git merge-base HEAD <default-branch>)..HEAD` — commits in this branch vs default branch
+    - `git diff --stat HEAD` — stats for local uncommitted changes
+    - `git diff --stat $(git merge-base HEAD <default-branch>)..HEAD` — stats for all branch-level changes vs default branch
+    - `git diff HEAD` — full local diff (limit to 200 lines per file if large, note when truncated)
+    - `git diff $(git merge-base HEAD <default-branch>)..HEAD` — full branch diff (limit to 200 lines per file if large, note when truncated)
+
+    Combine both sets of changes into a unified view of everything that differs from the default branch, including local work not yet committed.
+
+    ## Step 2 — Map changes to functional areas
+
+    Analyse the diffs and group changed files into **functional areas** — logical sections of the system rather than individual files. Use your understanding of the code to infer areas such as:
+
+    - **API / public interface** — exported functions, REST endpoints, CLI commands, event contracts
+    - **Business logic / core** — domain logic, algorithms, data processing
+    - **Data layer** — database queries, schema, migrations, models, serialization
+    - **Configuration / environment** — config files, env handling, feature flags, defaults
+    - **Authentication / authorisation** — auth flows, permission checks, session handling
+    - **UI / presentation** — templates, components, styles, client-side logic
+    - **Integration points** — calls to external services, SDKs, message queues
+    - **Build / deployment** — CI pipelines, Dockerfiles, build scripts, dependency manifests
+    - **Tests** — test files, fixtures, mocks (note: changes here affect test reliability)
+    - **Documentation** — README, changelogs, inline docs
+
+    Each file should map to one primary area; a file may appear in a secondary area if it crosses concerns.
+
+    ## Step 3 — Identify side-effect and regression zones
+
+    For each functional area with changes, reason about what else could be affected even if not directly modified:
+
+    - Functions/modules that **import or call** changed code
+    - Behaviours that depend on changed **configuration or schema**
+    - **User-facing flows** that pass through changed logic
+    - **Downstream consumers** of changed APIs or contracts
+    - **Edge cases** that the change may have altered implicitly (null handling, error paths, boundary values)
+
+    List these as "watch areas" — places to pay extra attention during testing even though the code there was not changed.
+
+    ## Step 4 — Build the test plan
+
+    Present the test plan using this structure:
+
+    ---
+
+    ### Summary
+
+    One short paragraph describing what this branch changes at a high level and the overall scope of testing needed.
+
+    ---
+
+    ### Coverage map
+
+    A table showing which areas are touched and their test priority:
+
+    | Area | Files changed | Priority | Rationale |
+    |---|---|---|---|
+    | _e.g. Business logic_ | _file-a.ts, file-b.ts_ | **High** | _Core algorithm modified_ |
+
+    Priority levels: **High** (correctness-critical, user-facing, data-affecting) · **Medium** (supporting logic, config) · **Low** (docs, formatting, test-only changes).
+
+    ---
+
+    ### Test cases
+
+    For each **High** and **Medium** priority area, list concrete test cases. Group by area. Each test case must be:
+
+    - Written as an action + expected result: _"Do X → expect Y"_
+    - Actionable without deep code knowledge (a QA engineer should be able to follow it)
+    - Focused on behaviour, not implementation
+
+    Format per area:
+
+    #### [Area name] — _[Priority]_
+
+    _Brief description of what changed and why it needs testing._
+
+    - [ ] **TC-N** · [Short label] — [Action] → [Expected result]
+    - [ ] **TC-N** · [Edge case label] — [Action with boundary/edge input] → [Expected result]
+    - [ ] **TC-N** · [Regression label] — [Action that exercises existing behaviour] → [Confirm no regression]
+
+    ---
+
+    ### Watch areas (regression risks)
+
+    A bullet list of areas that were **not** directly changed but could be affected, with a one-line reason each. These should be spot-checked even if not covered by a dedicated test case.
+
+    ---
+
+    ### Out of scope
+
+    Briefly note any areas that were explicitly **not** changed and do not need re-testing for this branch (helps the reader prioritise).
+
+    ---
+
+    ## Step 5 — Deliver the plan
+
+    Output the full test plan in markdown, ready to paste into a PR description, ticket, or test tracker.
+
+    Keep test cases concrete and numbered sequentially (TC-1, TC-2, …) across all areas so they can be referenced in bug reports.
+
+    If the diff is very large (> 30 files or > 500 lines total), note the most critical 5–10 test cases at the top in a **"Critical path"** section before the full coverage map.
+
+# -----------------------
+- name       : git-cleanup
+  title      : "/git-cleanup"
+  description: "Clean up local git branches that no longer exist on the remote origin, with safety checks for recently active branches."
+  tags       : [git, branches, cleanup, maintenance]
+  usage      : "/git-cleanup"
+  code       : |
+    ---
+    name: Git Branch Cleanup
+    description: Clean up local git branches that no longer exist on the remote origin, with safety checks for recently active branches.
+    ---
+
+    Clean up local git branches that no longer exist on the remote origin, with safety checks for recently active branches.
+
+    ## Step 1 — Verify git repository
+
+    Run `git rev-parse --git-dir 2>/dev/null` to confirm the current directory is a git repository.
+
+    If it is **not** a git repo, stop and inform the user: _"Not a git repository. Navigate to a git project directory and try again."_
+
+    ## Step 2 — Detect default branch and current branch
+
+    Run:
+    - `git rev-parse --abbrev-ref HEAD` — current branch name (save as `CURRENT_BRANCH`)
+    - `git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'` — detect the default remote branch (save as `DEFAULT_BRANCH`; fallback: check `git branch --list main master` and pick whichever exists)
+
+    ## Step 3 — Sync with remote
+
+    Run `git fetch --prune origin` to update all remote-tracking refs and prune stale ones. This ensures the comparison in the next step reflects the true current state of the remote.
+
+    If the fetch fails (e.g. no network, no remote), warn the user: _"Could not reach origin. Results may be outdated."_ and continue with cached remote-tracking data.
+
+    ## Step 4 — Identify local branches not present on the remote
+
+    Run:
+    ```
+    git branch --format='%(refname:short)'
+    ```
+    to list all local branches.
+
+    Run:
+    ```
+    git branch -r --format='%(refname:short)' | sed 's|origin/||'
+    ```
+    to list all remote branches (strip the `origin/` prefix).
+
+    Compute the difference: local branches that do **not** appear in the remote list. This is the set of **stale local branches** (`STALE_BRANCHES`).
+
+    Exclude from `STALE_BRANCHES`:
+    - The current branch (`CURRENT_BRANCH`)
+    - The default branch (`DEFAULT_BRANCH`)
+
+    If `STALE_BRANCHES` is empty, stop and inform the user: _"All local branches exist on the remote. Nothing to clean up."_
+
+    ## Step 5 — Analyse each stale branch
+
+    For every branch in `STALE_BRANCHES`, collect the following data:
+
+    | Data point | Command |
+    |---|---|
+    | Last commit date | `git log -1 --format='%ci' <branch>` |
+    | Last commit age (days) | `git log -1 --format='%cr' <branch>` |
+    | Last commit message | `git log -1 --format='%s' <branch>` |
+    | Last commit author | `git log -1 --format='%an' <branch>` |
+    | Commits ahead of default | `git rev-list --count <DEFAULT_BRANCH>..<branch>` |
+    | Merge status | `git merge-base --is-ancestor <branch> <DEFAULT_BRANCH> && echo merged \|\| echo unmerged` |
+
+    Classify each branch into one of two groups:
+
+    - **SAFE** — last commit is **older than 7 days** OR the branch is **fully merged** into the default branch. These can be deleted without asking.
+    - **ACTIVE** — last commit is **within the last 7 days** AND the branch is **not fully merged**. These require explicit user confirmation before deletion.
+
+    ## Step 6 — Present the analysis table
+
+    Display a consolidated table of all stale branches:
+
+    ```
+    Branch | Last Commit | Age | Author | Commits Ahead | Merged? | Action
+    ```
+
+    Mark **SAFE** branches with `[auto-delete]` and **ACTIVE** branches with `[needs confirmation]`.
+
+    ## Step 7 — Delete SAFE branches
+
+    For each SAFE branch, run `git branch -d <branch>`. If `-d` fails, fall back to `git branch -D <branch>` and note it.
+
+    ## Step 8 — Confirm ACTIVE branches individually
+
+    For each ACTIVE branch, display its details and ask: **yes** (delete) / **no** (keep) / **skip-all**.
+
+    ## Step 9 — Final summary
+
+    Show a clean summary: Deleted / Kept / Failed counts with branch names.
+
+# -----------------------
+- name       : git-bug
+  title      : "/git-bug"
+  description: "Bug review of the current repository — scans for null/undefined derefs, error handling gaps, race conditions, logic errors, and other defects, then reports all findings ordered by criticality."
+  tags       : [git, bugs, audit]
+  usage      : "/git-bug"
+  code       : |
+    ---
+    name: git-bug
+    description: Bug review of the current repository — scans for null/undefined derefs, error handling gaps, race conditions, logic errors, and other defects, then reports all findings ordered by criticality.
+    tags: [git, bugs, audit]
+    ---
+
+    Perform a bug review of the current repository. Follow these steps:
+
+    ## Step 1 — Gather repository context
+
+    Run these commands to understand the repo shape:
+
+    - `git rev-parse --abbrev-ref HEAD` — current branch
+    - `git rev-parse --show-toplevel` — repo root (use as base for all searches below)
+    - `git ls-files` — all tracked files (note dominant languages and file types)
+    - `git log --oneline -10` — recent commits (focus extra attention on recently changed files)
+
+    Identify the dominant tech stack from file extensions and manifests so you can apply language-specific checks in later steps. Collect the list of recently modified files from the log for prioritisation.
+
+    ## Step 2 — Scan for null, undefined, and uninitialized access
+
+    **JavaScript / TypeScript:**
+    ```
+    git grep -nEi "\w+\.\w+\.\w+" -- '*.js' '*.ts' | grep -v "//\|test\|spec"
+    git grep -nEi "\.length\b" -- '*.js' '*.ts' | grep -v "if\s*(\|&&\|check\|guard"
+    git grep -nEi "req\.body\.\w+|req\.params\.\w+|req\.query\.\w+" -- '*.js' '*.ts'
+    git grep -nEi "JSON\.parse\b" -- '*.js' '*.ts'
+    ```
+
+    **Python:**
+    ```
+    git grep -nEi "\w+\[0\]|\w+\[-1\]" -- '*.py'
+    git grep -nEi "\.get\(\w+\)\." -- '*.py'
+    git grep -nEi "int\s*\(|float\s*\(" -- '*.py'
+    ```
+
+    **Go:**
+    ```
+    git grep -nEi "\[0\]\|\[err\]\s*!=" -- '*.go'
+    git grep -nEi "if err != nil" -- '*.go'
+    git grep -nE "_, err :=|err :=" -- '*.go' | grep -v "if err"
+    ```
+
+    ## Step 3 — Scan for missing or swallowed error handling
+
+    **JavaScript / TypeScript:**
+    ```
+    git grep -nEi "\.catch\s*\(\s*\)" -- '*.js' '*.ts'
+    git grep -nEi "catch\s*\([^)]*\)\s*\{\s*\}" -- '*.js' '*.ts'
+    git grep -nEi "Promise\b" -- '*.js' '*.ts' | grep -v "await\|\.then\|\.catch"
+    ```
+
+    **Python:**
+    ```
+    git grep -nEi "except\s*:" -- '*.py'
+    git grep -nEi "except\s+Exception\s*:" -- '*.py'
+    git grep -nEi "pass$" -- '*.py'
+    ```
+
+    **Go:**
+    ```
+    git grep -nE "err != nil" -- '*.go' -A 1 | grep -E "^\s*(//|_\s*=)"
+    git grep -nE "_\s*,\s*err\b|err\s*:?=\b" -- '*.go' | grep -v "if err\|return err\|log"
+    ```
+
+    ## Step 4 — Scan for race conditions and concurrency bugs
+
+    **JavaScript / TypeScript:**
+    ```
+    git grep -nEi "setInterval\|setTimeout" -- '*.js' '*.ts'
+    git grep -nEi "global\.\w+\s*\+\+|global\.\w+\s*--" -- '*.js' '*.ts'
+    ```
+
+    **Python:**
+    ```
+    git grep -nEi "threading\b|Thread\b|multiprocessing\b" -- '*.py'
+    git grep -nEi "global\s+\w+" -- '*.py'
+    git grep -nEi "Lock\(\)|RLock\(\)|Semaphore\(\)" -- '*.py'
+    ```
+
+    **Go:**
+    ```
+    git grep -nEi "go\s+func\b|goroutine\b" -- '*.go'
+    git grep -nEi "sync\.(WaitGroup|Mutex|RWMutex|Once)\b" -- '*.go'
+    git grep -nEi "chan\b" -- '*.go'
+    ```
+
+    ## Step 5 — Scan for off-by-one and boundary errors
+
+    ```
+    git grep -nEi "\[len\(\w+\)\]|\[\.length\]" -- '*.py' '*.js' '*.ts' '*.java' '*.go' '*.rb' '*.cs'
+    git grep -nEi "for\s+\w+\s*=\s*0\s*;\s*\w+\s*<=\s*\w+\.length" -- '*.js' '*.ts' '*.java' '*.cs'
+    git grep -nEi "range\(1,\s*len\(\w+\)\)|range\(0,\s*len\(\w+\)\s*\+\s*1\)" -- '*.py'
+    ```
+
+    ## Step 6 — Scan for incorrect type coercion and comparison
+
+    **JavaScript / TypeScript:**
+    ```
+    git grep -nEi "==\s*[^=]|!=\s*[^=]" -- '*.js'
+    git grep -nEi "parseInt\b|parseFloat\b|Number\(" -- '*.js' '*.ts'
+    ```
+
+    **Python:**
+    ```
+    git grep -nEi "is\s+[0-9]|is\s+['\"]|is\s+True|is\s+False" -- '*.py'
+    git grep -nEi "==\s*None\b|!=\s*None\b" -- '*.py'
+    ```
+
+    ## Step 7 — Scan for resource and state management bugs
+
+    ```
+    git grep -nEi "open\s*\(" -- '*.py' | grep -v "with open\|#"
+    git grep -nEi "def\s+\w+\s*\(\s*\w+\s*=\s*\[\|def\s+\w+\s*\(\s*\w+\s*=\s*\{" -- '*.py'
+    git grep -nEi "Object\.assign\(\w+," -- '*.js' '*.ts' | grep -v "{},"
+    git grep -nEi "\.sort\(\)" -- '*.js' '*.ts' | grep -v "\.slice\(\)\."
+    ```
+
+    ## Step 8 — Check for missing input validation at boundaries
+
+    ```
+    git grep -nEi "req\.body|req\.params|req\.query" -- '*.js' '*.ts' | grep -v "validate\|schema\|sanitize\|check\|guard"
+    git grep -nEi "request\.form\|request\.args\|request\.json" -- '*.py' | grep -v "validate\|schema\|check"
+    git grep -nEi "r\.FormValue\|r\.URL\.Query\(\)" -- '*.go' | grep -v "validate\|check\|parse"
+    ```
+
+    ## Step 9 — Scan for logic and control-flow bugs
+
+    ```
+    git grep -nEi "if\s*\(\s*(true|false)\b" -- '*.js' '*.ts' '*.java' '*.cs'
+    git grep -nEi "if\s+True:|if\s+False:" -- '*.py'
+    git grep -nEi "switch\s*\(" -- '*.js' '*.ts' '*.java' '*.go' '*.cs' | grep -v "default"
+    ```
+
+    ## Step 10 — Compile and present the bug report
+
+    Present a single consolidated report:
+
+    ### Bug Review — `<repo-name>` (`<branch>`)
+
+    #### Summary table
+
+    | Severity | Count |
+    |---|---|
+    | **Critical** | N |
+    | **High** | N |
+    | **Medium** | N |
+    | **Low** | N |
+    | **Info** | N |
+
+    #### Findings
+
+    List every finding grouped by severity (Critical → Info):
+
+    **[SEVERITY] — Short title**
+    - **File:** `path/to/file.ext:line`
+    - **Detail:** What was found and why it is likely a bug or defect
+    - **Recommendation:** Specific fix or defensive pattern to apply
+
+    Severity definitions: **Critical** = crash-inducing at runtime; **High** = likely incorrect behaviour under normal use; **Medium** = incorrect in edge cases; **Low** = defensive coding gaps; **Info** = code smell with no confirmed bug.
+
+    #### Overall bug risk assessment
+
+    Write a short paragraph (4–6 sentences) summarising the most dangerous defects, which modules carry the most risk, and the top 3 actionable recommendations.
+
+# -----------------------
+- name       : git-sec
+  title      : "/git-sec"
+  description: "Security review of the current repository — scans for secrets, vulnerable patterns, risky configs, and exposed files, then reports all findings ordered by criticality."
+  tags       : [git, security, audit]
+  usage      : "/git-sec"
+  code       : |
+    ---
+    name: git-security
+    description: Security review of the current repository — scans for secrets, vulnerable patterns, risky configs, and exposed files, then reports all findings ordered by criticality.
+    tags: [git, security, audit]
+    ---
+
+    Perform a security review of the current repository. Follow these steps:
+
+    ## Step 1 — Gather repository context
+
+    Run these commands to understand the repo shape:
+
+    - `git rev-parse --abbrev-ref HEAD` — current branch
+    - `git rev-parse --show-toplevel` — repo root
+    - `git ls-files` — all tracked files
+    - `git ls-files --others --exclude-standard` — untracked files not in .gitignore (potential leaks)
+    - `ls -la $(git rev-parse --show-toplevel)` — root directory listing
+    - `cat $(git rev-parse --show-toplevel)/.gitignore 2>/dev/null || echo "(no .gitignore)"` — review ignore rules
+
+    ## Step 2 — Scan for exposed secrets and credentials
+
+    ```
+    git grep -nEi "(password|passwd|pwd)\s*[:=]\s*['\"][^'\"]{4,}" -- ':!*.md' ':!*.lock'
+    git grep -nEi "(secret|api_key|apikey|api_secret|client_secret)\s*[:=]\s*['\"][^'\"]{6,}" -- ':!*.md' ':!*.lock'
+    git grep -nEi "(token|auth_token|access_token|bearer)\s*[:=]\s*['\"][^'\"]{8,}" -- ':!*.md' ':!*.lock'
+    git grep -nEi "(aws_access_key_id|aws_secret|AKIA[0-9A-Z]{16})" -- ':!*.md'
+    git grep -nEi "(private_key|BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY)" -- ':!*.md'
+    git grep -nEi "(database_url|db_url|mongo_uri|redis_url|postgres://|mysql://|mongodb://)" -- ':!*.md'
+    ```
+
+    ## Step 3 — Check sensitive file exposure
+
+    ```
+    git ls-files | grep -Ei '\.(pem|key|p12|pfx|jks|keystore|cer|crt|ppk)$'
+    git ls-files | grep -Ei '^\.env(\..+)?$|\.env\.local|\.env\.production|\.env\.staging'
+    git ls-files | grep -Ei '(id_rsa|id_dsa|id_ecdsa|id_ed25519|\.ssh/)'
+    git ls-files | grep -Ei '(credentials|secrets)\.(json|yaml|yml|xml|txt)$'
+    git ls-files | grep -Ei '\.(sqlite|sqlite3|db)$'
+    ```
+
+    ## Step 4 — Scan for insecure code patterns
+
+    **Injection risks:**
+    ```
+    git grep -nEi "eval\s*\(" -- '*.js' '*.ts' '*.py' '*.rb' '*.php'
+    git grep -nEi "exec\s*\(|system\s*\(|shell_exec|passthru|popen" -- '*.py' '*.rb' '*.php'
+    git grep -nEi "subprocess\.call|os\.system|os\.popen" -- '*.py'
+    git grep -nEi "child_process|exec\(|execSync\(" -- '*.js' '*.ts'
+    ```
+
+    **SQL injection:**
+    ```
+    git grep -nEi "\"SELECT.+\+|'SELECT.+\+" -- '*.java' '*.py' '*.rb' '*.php' '*.go' '*.cs'
+    git grep -nEi "string\.format.*SELECT|f['\"]SELECT" -- '*.py'
+    ```
+
+    **Dangerous deserialization:**
+    ```
+    git grep -nEi "pickle\.loads|yaml\.load\s*\(" -- '*.py'
+    git grep -nEi "ObjectInputStream|XMLDecoder|XStream" -- '*.java'
+    ```
+
+    **Weak crypto / hashing:**
+    ```
+    git grep -nEi "(md5|sha1)\s*\(|hashlib\.(md5|sha1)" -- '*.py' '*.js' '*.ts' '*.rb' '*.php' '*.go'
+    git grep -nEi "Math\.random\(\)" -- '*.js' '*.ts' '*.java'
+    ```
+
+    **Insecure HTTP / TLS:**
+    ```
+    git grep -nEi "verify\s*=\s*False|InsecureRequestWarning|CERT_NONE" -- '*.py'
+    git grep -nEi "rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED" -- '*.js' '*.ts'
+    git grep -nEi "http://" -- '*.env*' '*.yaml' '*.yml' '*.json' '*.config'
+    ```
+
+    ## Step 5 — Review dependency files for known-risky signals
+
+    Check `package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pom.xml` for:
+    - Packages fetched over HTTP
+    - Wildcard/unpinned versions
+    - `git+` or `file:` references to unreviewed sources
+
+    ## Step 6 — Check configuration and infrastructure files
+
+    ```
+    git ls-files | grep -Ei '(Dockerfile|docker-compose|\.github/workflows|\.gitlab-ci|Jenkinsfile|\.circleci|\.travis\.yml|Makefile)' | xargs -I{} git show HEAD:{} 2>/dev/null
+    ```
+
+    Look for: `--privileged`, secrets injected via `ARG`, `curl | bash`, CI steps echoing env vars with secrets, `chmod 777`, running as root.
+
+    ## Step 7 — Check .gitignore coverage
+
+    Report which of these common sensitive patterns are **missing** from `.gitignore`:
+    `.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.sqlite`, `*.db`, `id_rsa`, `.aws/credentials`, `credentials.json`, `secrets.yaml`, `secrets.json`, `*.log`
+
+    ## Step 8 — Compile and present the security report
+
+    ### Security Review — `<repo-name>` (`<branch>`)
+
+    #### Summary table
+
+    | Severity | Count |
+    |---|---|
+    | **Critical** | N |
+    | **High** | N |
+    | **Medium** | N |
+    | **Low** | N |
+    | **Info** | N |
+
+    #### Findings
+
+    **[SEVERITY] — Short title**
+    - **File:** `path/to/file.ext:line`
+    - **Detail:** What was found and why it is a risk
+    - **Recommendation:** Specific remediation step
+
+    Severity definitions: **Critical** = plaintext secret/credential committed; **High** = direct injection vector, insecure TLS disabled; **Medium** = weak hash, HTTP for non-local URLs, unpinned deps; **Low** = missing `.gitignore` entries, hardcoded localhost in non-test code; **Info** = observations with no immediate risk.
+
+    #### Overall security posture
+
+    Write a short paragraph (4–6 sentences) summarising the most critical risks, areas with highest attack surface, whether the repo is safe to make public, and the top 3 recommendations.
+
+# -----------------------
+- name       : git-perf
+  title      : "/git-perf"
+  description: "Performance review of the current repository — scans for algorithmic anti-patterns, expensive I/O, memory leaks, bloated assets, and missing optimisations, then reports all findings ordered by impact."
+  tags       : [git, performance, audit]
+  usage      : "/git-perf"
+  code       : |
+    ---
+    name: git-performance
+    description: Performance review of the current repository — scans for algorithmic anti-patterns, expensive I/O, memory leaks, bloated assets, and missing optimisations, then reports all findings ordered by impact.
+    tags: [git, performance, audit]
+    ---
+
+    Perform a performance review of the current repository. Follow these steps:
+
+    ## Step 1 — Gather repository context
+
+    - `git rev-parse --abbrev-ref HEAD` — current branch
+    - `git rev-parse --show-toplevel` — repo root
+    - `git ls-files` — all tracked files
+    - `git ls-files | wc -l` — total tracked file count
+    - `git log --oneline -10` — recent commits
+
+    Identify the dominant tech stack so you can apply language-specific checks in later steps.
+
+    ## Step 2 — Detect large and binary files in the repository
+
+    ```
+    git ls-files | xargs -I{} du -sh {} 2>/dev/null | sort -rh | head -30
+    git ls-files | grep -Ei '\.(png|jpg|jpeg|gif|bmp|tiff|ico|webp|svg)$' | xargs -I{} du -sh {} 2>/dev/null | sort -rh | head -20
+    git ls-files | grep -Ei '\.(mp4|mov|avi|mkv|mp3|wav|ogg|flac|zip|tar|gz|bz2|7z|rar|jar|war|ear|wasm)$'
+    git count-objects -vH
+    ```
+
+    Report total repo size and flag any single file over **1 MB** that is tracked in git.
+
+    ## Step 3 — Scan for algorithmic anti-patterns
+
+    **Nested loops and O(n²) patterns:**
+    ```
+    git grep -nEi "\.forEach\(.+\.forEach\(|\.map\(.+\.map\(" -- '*.js' '*.ts'
+    git grep -nEi "while\s*(true|1|True)" -- '*.py' '*.js' '*.ts' '*.java' '*.go' '*.rb' '*.cs'
+    ```
+
+    **Repeated expensive lookups inside loops:**
+    ```
+    git grep -nEi "\.(find|filter|indexOf|includes)\(" -- '*.js' '*.ts'
+    git grep -nEi "list\.contains\(|stream\(\)\.filter\(" -- '*.java'
+    ```
+
+    ## Step 4 — Scan for database and query anti-patterns
+
+    ```
+    git grep -nEi "SELECT \*" -- '*.sql' '*.py' '*.js' '*.ts' '*.java' '*.rb' '*.go' '*.cs' '*.php'
+    git grep -nEi "fetchAll|fetchMany|\.list\(\)" -- '*.py' '*.java' '*.go'
+    git grep -nEi "OFFSET\s+[0-9]" -- '*.sql' '*.py' '*.js' '*.ts' '*.java' '*.rb'
+    git grep -nEi "\.execute\(|cursor\.execute\(" -- '*.py'
+    ```
+
+    Look for queries built inside loops (N+1), unbounded `SELECT *`, large-offset pagination, and missing `LIMIT` clauses.
+
+    ## Step 5 — Scan for memory and resource management issues
+
+    **Memory leaks and unbounded growth:**
+    ```
+    git grep -nEi "global\s+\w+" -- '*.py' '*.js' '*.ts' '*.php'
+    git grep -nEi "window\.\w+\s*=" -- '*.js' '*.ts'
+    git grep -nEi "static\s+(List|Map|Set|ArrayList|HashMap)" -- '*.java'
+    ```
+
+    **Missing resource cleanup:**
+    ```
+    git grep -nEi "open\s*\(" -- '*.py' | grep -v "with open"
+    git grep -nEi "fs\.open\b|fs\.createReadStream\b" -- '*.js' '*.ts'
+    ```
+
+    **Synchronous / blocking I/O in async contexts:**
+    ```
+    git grep -nEi "fs\.readFileSync|fs\.writeFileSync|execSync\b" -- '*.js' '*.ts'
+    git grep -nEi "time\.sleep\b|requests\.get\b" -- '*.py'
+    ```
+
+    ## Step 6 — Scan for inefficient patterns by language
+
+    **JavaScript / TypeScript:**
+    ```
+    git grep -nEi "\.innerHTML\s*\+=" -- '*.js' '*.ts'
+    git grep -nEi "JSON\.parse\(JSON\.stringify\(" -- '*.js' '*.ts'
+    git grep -nEi "new\s+RegExp\(" -- '*.js' '*.ts'
+    ```
+
+    **Python:**
+    ```
+    git grep -nEi "\+\s*=\s*['\"]|str\s*\+\s*str" -- '*.py'
+    git grep -nEi "range\(len\(" -- '*.py'
+    git grep -nEi "import \*" -- '*.py'
+    ```
+
+    **Java / Kotlin:**
+    ```
+    git grep -nEi "String\s*\+=" -- '*.java' '*.kt'
+    git grep -nEi "System\.out\.print" -- '*.java'
+    ```
+
+    ## Step 7 — Check caching and memoisation signals
+
+    ```
+    git grep -nEi "\@cache|\@lru_cache|functools\.cache|memoize" -- '*.py' '*.rb' '*.js' '*.ts'
+    git grep -nEi "redis|memcached|caffeine|guava.*cache" -- '*.py' '*.java' '*.go' '*.js' '*.ts' '*.rb'
+    ```
+
+    Note whether caching infrastructure exists. If expensive operations are found without corresponding cache usage, flag the gap.
+
+    ## Step 8 — Inspect dependency and bundle size signals
+
+    ```
+    cat package.json 2>/dev/null | grep -E '"dependencies"|"devDependencies"' -A 100 | head -60
+    cat package-lock.json 2>/dev/null | grep '"node_modules"' | wc -l
+    git ls-files | grep -Ei '\.(min\.js|bundle\.js|vendor\.js)$'
+    ```
+
+    Flag: large number of transitive deps, bundled vendor files committed to git, missing tree-shaking or code-splitting configuration.
+
+    ## Step 9 — Check build and CI performance signals
+
+    Look for: no layer caching in Dockerfile, rebuilding dependencies on every CI run, running the full test suite without parallelisation, no build artifact caching between stages, missing `.dockerignore`.
+
+    ## Step 10 — Compile and present the performance report
+
+    ### Performance Review — `<repo-name>` (`<branch>`)
+
+    #### Summary table
+
+    | Impact | Count |
+    |---|---|
+    | **Critical** | N |
+    | **High** | N |
+    | **Medium** | N |
+    | **Low** | N |
+    | **Info** | N |
+
+    #### Findings
+
+    **[IMPACT] — Short title**
+    - **File:** `path/to/file.ext:line` (or `(repo-wide)` if applies globally)
+    - **Detail:** What was found and why it hurts performance
+    - **Recommendation:** Specific, actionable fix
+
+    Impact definitions: **Critical** = severe latency or memory exhaustion at scale; **High** = significant overhead degrading user-facing performance; **Medium** = inefficient patterns that accumulate under load; **Low** = minor inefficiencies; **Info** = observations with no direct runtime cost.
+
+    #### Overall performance posture
+
+    Write a short paragraph (4–6 sentences) summarising the highest-impact bottlenecks, which layers carry the most risk, whether the codebase is likely to hold up under production load, and the top 3 recommendations.
 
