@@ -2343,3 +2343,77 @@
 
     Write a short paragraph (4–6 sentences) summarising the highest-impact bottlenecks, which layers carry the most risk, whether the codebase is likely to hold up under production load, and the top 3 recommendations.
 
+# -------------------
+- name       : wiki-feedback
+  title      : "/wiki-feedback"
+  description: "Review the active wiki and apply focused corrections from inline or file-based feedback."
+  tags       : [wiki, review, maintenance]
+  usage      : "/wiki-feedback The deployment guide should state that wiki writes require wikiaccess=rw."
+  code       : |
+    ---
+    name: wiki-feedback
+    description: Review the active wiki and apply focused corrections from inline or file-based feedback.
+    tags: [wiki, review, maintenance]
+    ---
+
+    Review the active Mini-A wiki, then incorporate the supplied feedback with appropriate, focused corrections to its content.
+
+    The feedback argument is:
+
+    ```
+    {{args}}
+    ```
+
+    ## Step 1 — Validate prerequisites and feedback
+
+    1. Confirm that the wiki is enabled (`usewiki=true`) and writable (`wikiaccess=rw`). If it is not enabled or writable, stop and say: "Start mini-a with `usewiki=true wikiaccess=rw` to apply wiki feedback."
+    2. Require a non-empty feedback argument. If none was provided, stop and show this usage:
+
+       ```
+       /wiki-feedback <feedback sentence>
+       /wiki-feedback <path/to/feedback.md>
+       ```
+
+    3. Treat the complete argument above as a file path when, after removing one matching pair of surrounding quotes if present, it resolves to an existing readable regular text file. Read that file as the feedback source. Otherwise, treat the complete argument as inline feedback.
+    4. If a supplied path looks intended as a file but cannot be read, stop and report the path error instead of guessing from its filename.
+
+    ## Step 2 — Review the relevant wiki context
+
+    1. Read `AGENTS.md` when present and follow its contribution rules.
+    2. Run `wiki tree` and `wiki list` to understand the current structure.
+    3. Identify the pages relevant to the feedback. Read those pages in full, along with their nearest `index.md` pages and directly linked pages when needed to preserve accuracy and navigation.
+    4. Run `wiki lint` and record the pre-existing issues. Do not change unrelated pages merely to reduce existing lint counts.
+
+    ## Step 3 — Apply the feedback
+
+    Use the feedback below as the requested changes, after reviewing the wiki context:
+
+    > {{args}}
+
+    Make the appropriate corrections directly in the wiki:
+
+    - Prefer updating the existing authoritative page over creating a duplicate.
+    - Keep edits factual, specific, and consistent with the wiki's established terminology, front-matter, and writing style.
+    - Preserve valuable existing material unless the feedback explicitly requires its removal or correction.
+    - Update relevant index/navigation links when a new page is genuinely necessary.
+    - Do not make broad reorganizations, delete pages, or change unrelated content.
+    - If the feedback is ambiguous or conflicts with evidence already in the wiki, do not invent facts. Make only the safe correction and clearly report the unresolved point.
+
+    ## Step 4 — Verify and report
+
+    1. Run `wiki lint` after the edits.
+    2. Fix any new lint issues caused by this command. Do not claim unrelated pre-existing issues were fixed unless they were actually corrected.
+    3. Report concisely:
+       - whether feedback came from inline text or a file path;
+       - pages created and pages updated;
+       - the substantive corrections made;
+       - unresolved or ambiguous feedback, if any;
+       - lint status before and after, separating pre-existing issues from new ones.
+
+    ## Usage examples
+
+    ```text
+    /wiki-feedback The deployment guide should state that wiki writes require wikiaccess=rw.
+    /wiki-feedback ./review-notes.md
+    /wiki-feedback "/Users/me/Documents/wiki feedback.md"
+    ```
